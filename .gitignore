@@ -1,3 +1,4 @@
 .*
 keys/
+logs/
 !/.gitignore
