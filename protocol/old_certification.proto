@@ -1,0 +1,110 @@
+syntax = "proto3";
+
+package proto;
+
+option go_package = "github.com/raphasch/hotcertification/proto";
+
+// ignore red underlined import statement -> gorums.proto is passed in when compiling with protoc -> see README.md
+import "gorums.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/duration.proto";
+  
+
+
+service Certification {
+    // simple synchronouse streamed gRPC call
+    rpc RegisterCSR(Request) returns (Response) {   
+      option (gorums.ordered) = true;
+    }
+
+    rpc GetCertificate(Request) returns (Response) {
+      option (gorums.ordered) = true;
+    }
+
+  //rpc GetCAPubKey() return (Response) {
+  //    option (gorums.quorumcall) = true;
+  //  }
+
+    //Gorums Functionality, not important for now.
+    // This function comibines the above two commands by making it an asynchronous, quorum call on all replicas -> no Coorinator node
+    // ExecCommand sends a command to all replicas and waits for valid signatures
+    // from f+1 replicas -> Quorum function
+    rpc ExecCommand(AsyncRequest) returns (AsyncResponse) {
+      option (gorums.quorumcall) = true;
+      option (gorums.ordered) = true;
+      option (gorums.async) = true;
+    }
+}
+
+message Request {
+  uint32 ClientID = 1;
+  uint64 SequenceNumber = 2;
+  
+  // all optional
+  // a Request is the general message type in which everything else is wrapped
+  CSR CSR = 3;
+  ValidationInfo ValidationInfo = 4;
+  // maybe a JWT?
+  string SessionToken = 5;
+}
+
+message Response {
+    bool OK = 1;
+    // these are all optional but gorums doesn't support these
+    string Info = 2;
+    string SessionToken = 3;
+    Certificate Certificate = 4;
+}
+
+message CSR {
+  Certificate Certificate = 1;
+  ValidationInfo ValidationInfo = 2;
+}
+
+message Certificate {
+  string Identity = 1;
+  string PublicKey = 2;
+  
+  // optional 
+  string Signature = 3;
+  bytes OtherOptions = 4;
+}
+
+message ValidationInfo {
+  string LongTermPublicKey = 1;
+  // SignedMessage probably has to be a more complex data type
+  string SignedMessage = 2;
+}
+
+message Batch {repeated Request Requests = 1;}
+
+message Empty{}
+
+// Not important for now
+message AsyncRequest {
+  uint32 ClientID = 1;
+  uint64 SequenceNumber = 2;
+  bytes Data = 3;
+}
+
+message AsyncResponse {
+  bytes Data = 1;
+}
+
+// CommandStats contains the start time and duration that elapsed before a
+// command was executed.
+message CommandStats {
+  google.protobuf.Timestamp StartTime = 1;
+  google.protobuf.Duration Duration = 2;
+}
+
+// BenchmarkData contains the throughput (in ops/sec) and latency (in ms) as
+// measured by the client, as well as the time and duration information for each
+// command.
+message BenchmarkData {
+  double MeasuredThroughput = 1; // ops/sec
+  double MeasuredLatency = 2;    // ms
+  double LatencyVariance = 3;    // ms^2
+  repeated CommandStats Stats = 4;
+}
