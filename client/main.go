@@ -11,6 +11,7 @@ import (
 )
 
 func main() {
+
 	client, err := newCertificationClient()
 	if err != nil {
 		fmt.Printf("couldn't create client: %v\n", err)

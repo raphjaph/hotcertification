@@ -7,7 +7,7 @@ import (
 
 	"github.com/raphasch/hotcertification/protocol"
 	"github.com/relab/hotstuff"
-	gProto "google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/proto"
 )
 
 type reqCache struct {
@@ -15,16 +15,16 @@ type reqCache struct {
 	batchSize     int
 	serialNumbers map[uint32]uint64 // highest proposed serial number per client ID
 	cache         list.List
-	marshaler     gProto.MarshalOptions
-	unmarshaler   gProto.UnmarshalOptions
+	marshaler     proto.MarshalOptions
+	unmarshaler   proto.UnmarshalOptions
 }
 
 func newReqCache(batchSize int) *reqCache {
 	return &reqCache{
 		batchSize:     batchSize,
 		serialNumbers: make(map[uint32]uint64),
-		marshaler:     gProto.MarshalOptions{Deterministic: true},
-		unmarshaler:   gProto.UnmarshalOptions{DiscardUnknown: true},
+		marshaler:     proto.MarshalOptions{Deterministic: true},
+		unmarshaler:   proto.UnmarshalOptions{DiscardUnknown: true},
 	}
 }
 

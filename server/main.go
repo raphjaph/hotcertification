@@ -11,7 +11,7 @@ import (
 	"syscall"
 	"time"
 
-	//"github.com/raphasch/hotcertification/logging"
+	"github.com/raphasch/hotcertification/logging"
 	"github.com/relab/hotstuff"
 	"github.com/relab/hotstuff/config"
 	"github.com/relab/hotstuff/crypto"
@@ -149,7 +149,7 @@ func start(ctx context.Context, conf *options) {
 		replicaConfig.Replicas[r.ID] = info
 	}
 
-	//logging.NameLogger(fmt.Sprintf("hs%d", conf.SelfID))
+	logging.NameLogger(fmt.Sprintf("hcs%d", conf.SelfID))
 
 	srv := newCertificationServer(conf, replicaConfig)
 

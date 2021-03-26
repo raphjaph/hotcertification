@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-export HOTSTUFF_LOG=debug
+export HOTCERTIFICATION_LOG=debug
 
 trap 'trap - SIGTERM && kill -- -$$' SIGINT SIGTERM EXIT
 

@@ -15,7 +15,7 @@ var mut sync.Mutex
 
 func initLogger() {
 	var config zap.Config
-	if strings.ToLower(os.Getenv("HOTSTUFF_LOG_TYPE")) == "json" {
+	if strings.ToLower(os.Getenv("HOTCERTIFICATION_LOG_TYPE")) == "json" {
 		config = zap.NewProductionConfig()
 	} else {
 		config = zap.NewDevelopmentConfig()
@@ -27,7 +27,7 @@ func initLogger() {
 	if err != nil {
 		panic(err)
 	}
-	switch strings.ToLower(os.Getenv("HOTSTUFF_LOG")) {
+	switch strings.ToLower(os.Getenv("HOTCERTIFICATION_LOG")) {
 	case "1":
 		fallthrough
 	case "debug":
@@ -44,7 +44,7 @@ func initLogger() {
 	logger = l.Sugar()
 }
 
-// GetLogger returns a pointer to the global logger for HotStuff.
+// GetLogger returns a pointer to the global logger for a HotCertification.
 func GetLogger() *zap.SugaredLogger {
 	mut.Lock()
 	defer mut.Unlock()
