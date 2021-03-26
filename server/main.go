@@ -11,12 +11,12 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/raphasch/hotcertification/cli"
 	//"github.com/raphasch/hotcertification/logging"
 	"github.com/relab/hotstuff"
 	"github.com/relab/hotstuff/config"
 	"github.com/relab/hotstuff/crypto"
 	"github.com/spf13/pflag"
+	"github.com/spf13/viper"
 	"google.golang.org/grpc/credentials"
 )
 
@@ -87,7 +87,7 @@ func main() {
 	}
 
 	var conf options
-	err := cli.ReadConfig(&conf, *configFile)
+	err := ReadConfig(&conf, *configFile)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to read config: %v\n", err)
 		os.Exit(1)
@@ -219,4 +219,36 @@ func loadCreds(conf *options) (credentials.TransportCredentials, tls.Certificate
 	})
 
 	return creds, tlsCert
+}
+
+// ReadConfig reads config options from configuration files and command line flags.
+func ReadConfig(opts interface{}, secondaryConfig string) (err error) {
+	err = viper.BindPFlags(pflag.CommandLine)
+	if err != nil {
+		return err
+	}
+
+	// read main config file in working dir
+	viper.SetConfigName("hotstuff")
+	viper.AddConfigPath(".")
+	err = viper.ReadInConfig()
+	if err != nil {
+		return err
+	}
+
+	// read secondary config if requested
+	if secondaryConfig != "" {
+		viper.SetConfigFile(secondaryConfig)
+		err = viper.MergeInConfig()
+		if err != nil {
+			return err
+		}
+	}
+
+	err = viper.Unmarshal(opts)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
