@@ -19,7 +19,6 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	"github.com/raphasch/hotcertification/protocol"
-	"github.com/raphasch/hotvertification/internal/crypto"
 )
 
 // cmdID is a unique identifier for a command

@@ -2,19 +2,27 @@
 
 ## TODO
 
-- [] find out how to show logs from internal consensus protocol and client facing
-  server; pipe HS log into my logger
 - [] add [database](https://github.com/gostor/awesome-go-storage) or
   [interface](https://github.com/philippgille/gokv) to database or check out
   [sqlite](https://www.sqlite.org/index.html)
 - [] add a Makefile, see [here](https://makefiletutorial.com/) for help
-- [] change hotstuff.toml to hotstuff.yml see [here](https://stackoverflow.com/questions/33989612/yaml-equivalent-of-array-of-objects-in-json)
 - [] make event-driven architecture? -> more lightweight; look at Flow implementation
-- [] recycle PartialCert from Hotstuff for Certification Service crypto
 - [] instead of ClientID and Sequence Number just use Hash of CSR to identify request (replaces CMDID data structure) -> use HashMap
 - [] slow down consensus rounds?
-- [] merge internal/cli into main
 - [] go run with SIGNALS
+
+## Logging and Configuration
+
+- [] find out how to show logs from internal consensus protocol and client facing
+server; pipe HS log into my logger
+- [] change hotstuff.toml to hotstuff.yml see [here](https://stackoverflow.com/questions/33989612/yaml-equivalent-of-array-of-objects-in-json)
+- [] merge internal/cli into main
+
+
+## Crypto/Threshold library
+
+- [] define curve parameters somewhere (CURVE, G, N) [wiki](https://en.wikipedia.org/wiki/Elliptic_Curve_Digital_Signature_Algorithm)
+- [] recycle PartialCert from Hotstuff for Certification Service crypto
 - [] add error checks to threshold.go
 
 ## Miscellaneous

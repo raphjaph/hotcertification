@@ -11,8 +11,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/raphasch/hotcertification/internal/cli"
-	//"github.com/raphasch/hotcertification/internal/logging"
+	"github.com/raphasch/hotcertification/cli"
+	//"github.com/raphasch/hotcertification/logging"
 	"github.com/relab/hotstuff"
 	"github.com/relab/hotstuff/config"
 	"github.com/relab/hotstuff/crypto"

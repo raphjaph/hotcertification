@@ -14,6 +14,7 @@ $bin --self-id 4 --privkey keys/r4.key --batch-size 1 2> logs/4.out &
 if [ "$1" = "kill" ]; then
 	sleep 5s
 	kill $!
+  killall -9 certificationserver
 fi
 
 wait; wait; wait; wait;
