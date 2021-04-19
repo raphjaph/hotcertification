@@ -1,0 +1,15 @@
+syntax = "proto3";
+package client;
+option go_package = "./example/threshold/client";
+
+service Certification {
+    rpc GetCertificate(CSR) returns (Certificate) {}
+}
+
+message CSR {
+    bytes CSR = 1;
+}
+
+message Certificate {
+    bytes Certificate = 1;
+}

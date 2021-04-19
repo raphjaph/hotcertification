@@ -1,0 +1,34 @@
+syntax = "proto3";
+package serialization;
+option go_package = "./serialization";
+
+message ThresholdKey {
+    KeyShare KeyShare = 1;
+    KeyMeta KeyMeta = 2;
+    uint32 HashType = 3;
+}
+
+message KeyShare {
+    bytes Si = 1;
+    uint32 Id = 2;
+}
+
+message KeyMeta {
+    RSAPublicKey PublicKey = 1;
+    uint32 K = 2;
+    uint32 L = 3;
+    VerificationKey VerificationKey = 4;
+}
+
+message RSAPublicKey {
+    // N ist a big.Int so need to encode into bytes
+    bytes N = 1;
+    int32 E = 2; 
+}
+
+message VerificationKey {
+    bytes V = 1;
+    bytes U = 2;
+    repeated bytes I = 3; 
+}
+

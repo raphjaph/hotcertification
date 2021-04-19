@@ -1,4 +1,4 @@
-package crypto
+package bls
 
 import (
 	"encoding/binary"

@@ -1,0 +1,18 @@
+syntax = "proto3";
+package signing;
+option go_package = "./example/threshold/signing";
+
+service Signing {
+    rpc GetPartialSig(Certificate) returns (SigShare) {}
+}
+
+message Certificate {
+    bytes Certificate = 1;
+}
+
+message SigShare {
+    bytes Xi = 1;
+    bytes C = 2;
+    bytes Z = 3;
+    uint32 Id = 4;
+}
