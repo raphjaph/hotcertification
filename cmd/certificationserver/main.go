@@ -54,8 +54,9 @@ type options struct {
 	PrivKey string `mapstructure:"privkey"` // privkey has to belong the to the pubkey and should be ecdsa because thresholdkey can't do TLS
 
 	// HotStuff configs
-	PmType   string      `mapstructure:"pacemaker"`
-	LeaderID hotstuff.ID `mapstructure:"leader-id"`
+	PmType      string      `mapstructure:"pacemaker"`
+	LeaderID    hotstuff.ID `mapstructure:"leader-id"`
+	ViewTimeout int         `mapstructure:"view-timeout"`
 
 	// HotCertification and miscellaneous configs
 	ThresholdKey string `mapstructure:"thresholdkey"`

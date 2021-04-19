@@ -11,10 +11,18 @@
 package replication
 
 import (
+	"fmt"
+	"os"
 	"sync"
+	"time"
 
 	"github.com/relab/hotstuff"
 	hotstuffbackend "github.com/relab/hotstuff/backend/gorums"
+	hsconfig "github.com/relab/hotstuff/config"
+	"github.com/relab/hotstuff/consensus/chainedhotstuff"
+	"github.com/relab/hotstuff/crypto"
+	"github.com/relab/hotstuff/crypto/ecdsa"
+	"github.com/relab/hotstuff/leaderrotation"
 )
 
 type options struct {
@@ -27,8 +35,9 @@ type options struct {
 	PrivKey string `mapstructure:"privkey"` // privkey has to belong the to the pubkey and should be ecdsa because thresholdkey can't do TLS
 
 	// HotStuff configs
-	PmType   string      `mapstructure:"pacemaker"`
-	LeaderID hotstuff.ID `mapstructure:"leader-id"`
+	PmType      string      `mapstructure:"pacemaker"`
+	LeaderID    hotstuff.ID `mapstructure:"leader-id"`
+	ViewTimeout int         `mapstructure:"view-timeout"`
 
 	// HotCertification and miscellaneous configs
 	ThresholdKey string `mapstructure:"thresholdkey"`
@@ -59,15 +68,50 @@ type replicationServer struct {
 	lastExecTime int64
 }
 
-func NewReplicationServer(opts *options, replicatedRequests chan struct{}) *replicationServer {
+func NewReplicationServer(opts *options, replicaConfig *hsconfig.ReplicaConfig, replicatedRequests chan struct{}) *replicationServer {
 
 	srv := &replicationServer{
-		reqBuffer:      NewRequestBuffer(100),
+		reqBuffer:      NewReqBuffer(100),
 		replicatedReqs: replicatedRequests,
 	}
 
 	// building the hotstuff consensus algorithm
+	builder := chainedhotstuff.DefaultModules(
+		*replicaConfig,
+		hotstuff.ExponentialTimeout{Base: time.Duration(opts.ViewTimeout) * time.Millisecond, ExponentBase: 2, MaxExponent: 8},
+	)
+	srv.mgr = hotstuffbackend.NewManager(*replicaConfig)
+	srv.hsSrv = hotstuffbackend.NewServer(*replicaConfig)
+	builder.Register(srv.mgr, srv.hsSrv)
 
+	var leaderRotation hotstuff.LeaderRotation
+	switch opts.PmType {
+	case "fixed":
+		leaderRotation = leaderrotation.NewFixed(opts.LeaderID)
+	case "round-robin":
+		// assumes IDs start at 1
+		leaderRotation = leaderrotation.NewRoundRobin()
+	default:
+		fmt.Fprintf(os.Stderr, "Invalid pacemaker type: '%s'\n", opts.PmType)
+		os.Exit(1)
+	}
+	var consensus hotstuff.Consensus
+	consensus = chainedhotstuff.New()
+
+	var cryptoImpl hotstuff.CryptoImpl
+	cryptoImpl = ecdsa.New()
+
+	builder.Register(
+		consensus,
+		crypto.NewCache(cryptoImpl, 2*srv.mgr.Len()),
+		leaderRotation,
+		srv,           // executor
+		srv.reqBuffer, // acceptor and command queue
+		//logging.New(fmt.Sprintf("hs%d", conf.SelfID)),
+	)
+	srv.hs = builder.Build()
+
+	return srv
 }
 
 /*

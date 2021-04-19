@@ -5,6 +5,7 @@ root-ca: keys/root.crt
 # HotStuff config options
 pacemaker: "round-robin"
 leader-id: 1
+view-timeout: 1000
 
 # Size of RSA key that certificates are signed with
 # must be same size as set when generating keys with keygen.go executable
