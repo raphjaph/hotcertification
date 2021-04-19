@@ -1,4 +1,5 @@
 .*
 keys/
 logs/
+crypto/test_keys
 !/.gitignore
