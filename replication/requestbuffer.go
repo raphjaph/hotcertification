@@ -10,7 +10,7 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-type reqCache struct {
+type reqBuffer struct {
 	mut           sync.Mutex
 	batchSize     int
 	serialNumbers map[uint32]uint64 // highest proposed serial number per client ID
@@ -19,8 +19,8 @@ type reqCache struct {
 	unmarshaler   proto.UnmarshalOptions
 }
 
-func newReqCache(batchSize int) *reqCache {
-	return &reqCache{
+func newReqBuffer(batchSize int) *reqBuffer {
+	return &reqBuffer{
 		batchSize:     batchSize,
 		serialNumbers: make(map[uint32]uint64),
 		marshaler:     proto.MarshalOptions{Deterministic: true},
@@ -28,7 +28,7 @@ func newReqCache(batchSize int) *reqCache {
 	}
 }
 
-func (cache *reqCache) addRequest(req *protocol.Request) {
+func (cache *reqBuffer) addRequest(req *protocol.Request) {
 	cache.mut.Lock()
 	defer cache.mut.Unlock()
 	/* if serialNo := cache.serialNumbers[req.GetClientID()]; serialNo >= req.GetSequenceNumber() {
@@ -43,7 +43,7 @@ func (cache *reqCache) addRequest(req *protocol.Request) {
 }
 
 // transform the requests into a HotStuff Command (string)
-func (cache *reqCache) GetCommand() *hotstuff.Command {
+func (cache *reqBuffer) GetCommand() *hotstuff.Command {
 	cache.mut.Lock()
 	defer cache.mut.Unlock()
 
@@ -78,7 +78,7 @@ func (cache *reqCache) GetCommand() *hotstuff.Command {
 
 // HotStuff only works with strings (Command) so this string has to be parsed with protocol buffers to get the single Requests
 // This function checks wether a CSR is valid/well-formed/...
-func (cache *reqCache) Accept(cmd hotstuff.Command) bool {
+func (cache *reqBuffer) Accept(cmd hotstuff.Command) bool {
 	// Parses from string to Request format
 	batch := new(protocol.Batch)
 	err := cache.unmarshaler.Unmarshal([]byte(cmd), batch)

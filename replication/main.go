@@ -5,13 +5,11 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
-	"net"
 	"os"
 	"os/signal"
-	"syscall"
+	"runtime"
 	"time"
 
-	"github.com/raphasch/hotcertification/logging"
 	"github.com/relab/hotstuff"
 	"github.com/relab/hotstuff/config"
 	"github.com/relab/hotstuff/crypto"
@@ -20,29 +18,35 @@ import (
 	"google.golang.org/grpc/credentials"
 )
 
+type replica struct {
+	ID         hotstuff.ID
+	PeerAddr   string `mapstructure:"peer-address"`
+	ClientAddr string `mapstructure:"client-address"`
+	Pubkey     string
+	Cert       string
+}
+
 type options struct {
-	RootCAs         []string `mapstructure:"root-cas"`
-	Privkey         string
-	Cert            string
-	SelfID          hotstuff.ID `mapstructure:"self-id"`
-	PmType          string      `mapstructure:"pacemaker"`
-	LeaderID        hotstuff.ID `mapstructure:"leader-id"`
-	ViewTimeout     int         `mapstructure:"view-timeout"`
 	BatchSize       int         `mapstructure:"batch-size"`
-	PrintThroughput bool        `mapstructure:"print-throughput"`
-	PrintCommands   bool        `mapstructure:"print-commands"`
+	Benchmark       bool        `mapstructure:"benchmark"`
+	Cert            string      `mapstructure:"cert"`
 	ClientAddr      string      `mapstructure:"client-listen"`
+	ExitAfter       int         `mapstructure:"exit-after"`
+	Input           string      `mapstructure:"input"`
+	LeaderID        hotstuff.ID `mapstructure:"leader-id"`
+	MaxInflight     uint64      `mapstructure:"max-inflight"`
+	Output          string      `mapstructure:"print-commands"`
+	PayloadSize     int         `mapstructure:"payload-size"`
 	PeerAddr        string      `mapstructure:"peer-listen"`
+	PmType          string      `mapstructure:"pacemaker"`
+	PrintThroughput bool        `mapstructure:"print-throughput"`
+	Privkey         string
+	RateLimit       int         `mapstructure:"rate-limit"`
+	RootCAs         []string    `mapstructure:"root-cas"`
+	SelfID          hotstuff.ID `mapstructure:"self-id"`
 	TLS             bool
-	Interval        int
-	Output          string
-	Replicas        []struct {
-		ID         hotstuff.ID
-		PeerAddr   string `mapstructure:"peer-address"`
-		ClientAddr string `mapstructure:"client-address"`
-		Pubkey     string
-		Cert       string
-	}
+	ViewTimeout     int `mapstructure:"view-timeout"`
+	Replicas        []replica
 }
 
 func usage() {
@@ -57,28 +61,32 @@ func usage() {
 func main() {
 	pflag.Usage = usage
 
-	signals := make(chan os.Signal, 1)
-	signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM)
-
 	// some configuration options can be set using flags
 	help := pflag.BoolP("help", "h", false, "Prints this text.")
 	configFile := pflag.String("config", "", "The path to the config file")
-	/* cpuprofile := pflag.String("cpuprofile", "", "File to write CPU profile to")
-	memprofile := pflag.String("memprofile", "", "File to write memory profile to")
-	fullprofile := pflag.String("fullprofile", "", "File to write fgprof profile to")
-	traceFile := pflag.String("trace", "", "File to write execution trace to") */
+	//server := pflag.Bool("server", false, "Start a server. If not specified, a client will be started.")
+
+	// shared options
 	pflag.Uint32("self-id", 0, "The id for this replica.")
-	pflag.Int("view-change", 100, "How many views before leader change with round-robin pacemaker")
-	pflag.Int("batch-size", 1, "How many commands are batched together for each proposal")
-	pflag.Int("view-timeout", 1000, "How many milliseconds before a view is timed out")
-	pflag.String("privkey", "", "The path to the private key file")
-	pflag.String("cert", "", "Path to the certificate")
-	pflag.Bool("print-commands", false, "Commands will be printed to stdout")
-	pflag.Bool("print-throughput", false, "Throughput measurements will be printed stdout")
-	pflag.Int("interval", 1000, "Throughput measurement interval in milliseconds")
 	pflag.Bool("tls", false, "Enable TLS")
-	pflag.String("client-listen", "", "Override the listen address for the client server")
-	pflag.String("peer-listen", "", "Override the listen address for the replica (peer) server")
+	pflag.Int("exit-after", 0, "Number of seconds after which the program should exit.")
+
+	// server options
+	pflag.String("privkey", "", "The path to the private key file (server)")
+	pflag.String("cert", "", "Path to the certificate (server)")
+	pflag.Int("view-timeout", 1000, "How many milliseconds before a view is timed out (server)")
+	pflag.Int("batch-size", 100, "How many commands are batched together for each proposal (server)")
+	pflag.Bool("print-throughput", false, "Throughput measurements will be printed stdout (server)")
+	pflag.String("client-listen", "", "Override the listen address for the client server (server)")
+	pflag.String("peer-listen", "", "Override the listen address for the replica (peer) server (server)")
+
+	// client options
+	pflag.String("input", "", "Optional file to use for payload data (client)")
+	pflag.Bool("benchmark", false, "If enabled, a BenchmarkData protobuf will be written to stdout. (client)")
+	pflag.Int("rate-limit", 0, "Limit the request-rate to approximately (in requests per second). (client)")
+	pflag.Int("payload-size", 0, "The size of the payload in bytes (client)")
+	pflag.Uint64("max-inflight", 10000, "The maximum number of messages that the client can wait for at once (client)")
+
 	pflag.Parse()
 
 	if *help {
@@ -93,20 +101,21 @@ func main() {
 		os.Exit(1)
 	}
 
-	// TODO: replace with go 1.16 signal.NotifyContext
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
 
 	go func() {
-		<-signals
-		fmt.Fprintf(os.Stderr, "Exiting...")
-		cancel()
+		if conf.ExitAfter > 0 {
+			time.Sleep(time.Duration(conf.ExitAfter) * time.Millisecond)
+			cancel()
+		}
 	}()
 
-	start(ctx, &conf)
+	runServer(ctx, &conf)
+	//runClient(ctx, &conf)
 }
 
-func start(ctx context.Context, conf *options) {
+func runServer(ctx context.Context, conf *options) {
 	privkey, err := crypto.ReadPrivateKeyFile(conf.Privkey)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to read private key file: %v\n", err)
@@ -114,10 +123,10 @@ func start(ctx context.Context, conf *options) {
 	}
 
 	var creds credentials.TransportCredentials
-	/* var tlsCert tls.Certificate
+	var tlsCert tls.Certificate
 	if conf.TLS {
 		creds, tlsCert = loadCreds(conf)
-	} */
+	}
 
 	var clientAddress string
 	replicaConfig := config.NewConfig(conf.SelfID, privkey, creds)
@@ -149,34 +158,17 @@ func start(ctx context.Context, conf *options) {
 		replicaConfig.Replicas[r.ID] = info
 	}
 
-	logging.NameLogger(fmt.Sprintf("hcs%d", conf.SelfID))
-
-	srv := newCertificationServer(conf, replicaConfig)
-
-	lis, err := net.Listen("tcp", clientAddress)
+	srv := newCertificationServer(conf, replicaConfig, &tlsCert)
+	err = srv.Start(clientAddress)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to start HotStuff: %v\n", err)
 		os.Exit(1)
 	}
 
-	fmt.Println("starting server ", srv.conf.SelfID, "...")
-
-	//TODO: catch errors
-	err = srv.hsSrv.Start(srv.hs)
-	err = srv.cfg.Connect(10 * time.Second)
-
-	// sleep so that all replicas can be ready before we start
-	time.Sleep(time.Duration(srv.conf.ViewTimeout) * time.Millisecond)
-
-	srv.pm.Start()
-	srv.gorumsSrv.Serve(lis)
+	fmt.Println("starting server", conf.SelfID, "on", clientAddress)
 
 	<-ctx.Done()
-	srv.pm.Stop()
-	srv.cfg.Close()
-	srv.hsSrv.Stop()
-	srv.gorumsSrv.Stop()
-	srv.cancel()
+	srv.Stop()
 }
 
 func loadCreds(conf *options) (credentials.TransportCredentials, tls.Certificate) {
@@ -196,8 +188,11 @@ func loadCreds(conf *options) (credentials.TransportCredentials, tls.Certificate
 
 	rootCAs, err := x509.SystemCertPool()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to get system cert pool: %v\n", err)
-		os.Exit(1)
+		// system cert pool is unavailable on windows
+		if runtime.GOOS != "windows" {
+			fmt.Fprintf(os.Stderr, "Failed to get system cert pool: %v\n", err)
+		}
+		rootCAs = x509.NewCertPool()
 	}
 
 	for _, ca := range conf.RootCAs {

@@ -16,7 +16,7 @@
 - [] find out how to show logs from internal consensus protocol and client facing
 server; pipe HS log into my logger
 - [] change hotstuff.toml to hotstuff.yml see [here](https://stackoverflow.com/questions/33989612/yaml-equivalent-of-array-of-objects-in-json)
-- [] merge internal/cli into main
+- [x] merge internal/cli into main
 
 
 ## Crypto/Threshold library
@@ -32,7 +32,7 @@ server; pipe HS log into my logger
 ## Protocol Buffers (protoc)
 
 - execute compile command in proto folder
-- ` protoc -I=/Users/raphael/.go/pkg/mod/github.com/relab/gorums@v0.2.3-0.20210213125733-f04667f97266. --go_out=paths=source_relative:. --gorums_out=paths=source_relative:. certification.proto `
+- ` protoc -I=/Users/raphael/.go/pkg/mod/github.com/relab/gorums@v0.3.0. --go_out=paths=source_relative:. --gorums_out=paths=source_relative:. certification.proto `
 - this command finds the absolute path with versioning for gorums package
 - ` go list -m -f {{.Dir}} github.com/relab/gorums `
 
