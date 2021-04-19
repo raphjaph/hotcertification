@@ -1,11 +1,11 @@
-package main
+package replication
 
 import (
 	"container/list"
 	"fmt"
 	"sync"
 
-	"github.com/raphasch/hotcertification/protocol"
+	"github.com/raphasch/hotcertification/client"
 	"github.com/relab/hotstuff"
 	"google.golang.org/protobuf/proto"
 )
@@ -19,7 +19,7 @@ type reqBuffer struct {
 	unmarshaler   proto.UnmarshalOptions
 }
 
-func newReqBuffer(batchSize int) *reqBuffer {
+func NewReqBuffer(batchSize int) *reqBuffer {
 	return &reqBuffer{
 		batchSize:     batchSize,
 		serialNumbers: make(map[uint32]uint64),
@@ -28,7 +28,7 @@ func newReqBuffer(batchSize int) *reqBuffer {
 	}
 }
 
-func (cache *reqBuffer) addRequest(req *protocol.Request) {
+func (cache *reqBuffer) addRequest(req *client.CSR) {
 	cache.mut.Lock()
 	defer cache.mut.Unlock()
 	/* if serialNo := cache.serialNumbers[req.GetClientID()]; serialNo >= req.GetSequenceNumber() {
@@ -51,7 +51,7 @@ func (cache *reqBuffer) GetCommand() *hotstuff.Command {
 		return nil
 	}
 
-	batch := new(protocol.Batch)
+	batch := new(client.Batch)
 
 	for i := 0; i < cache.batchSize; i++ {
 		elem := cache.cache.Front()
@@ -59,7 +59,7 @@ func (cache *reqBuffer) GetCommand() *hotstuff.Command {
 			break
 		}
 		cache.cache.Remove(elem)
-		request := elem.Value.(*protocol.Request)
+		request := elem.Value.(*client.CSR)
 		/* if serialNo := cache.serialNumbers[cmd.GetClientID()]; serialNo >= cmd.GetSequenceNumber() {
 			// command is too old, can't propose
 			continue
@@ -80,7 +80,7 @@ func (cache *reqBuffer) GetCommand() *hotstuff.Command {
 // This function checks wether a CSR is valid/well-formed/...
 func (cache *reqBuffer) Accept(cmd hotstuff.Command) bool {
 	// Parses from string to Request format
-	batch := new(protocol.Batch)
+	batch := new(client.Batch)
 	err := cache.unmarshaler.Unmarshal([]byte(cmd), batch)
 	if err != nil {
 		return false

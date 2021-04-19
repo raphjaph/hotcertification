@@ -24,12 +24,13 @@ import (
 	"strings"
 
 	"github.com/relab/hotstuff"
+	hsconfig "github.com/relab/hotstuff/config"
 	flag "github.com/spf13/pflag"
 	"github.com/spf13/viper"
 
-	"example/threshold/client"
-	"example/threshold/crypto"
-	"example/threshold/signing"
+	"github.com/raphasch/hotcertification/client"
+	"github.com/raphasch/hotcertification/crypto"
+	"github.com/raphasch/hotcertification/signing"
 )
 
 // Information other replicas in network have to know about each other (public knowledge)
@@ -143,6 +144,11 @@ func parseOptionsAndConfig() options {
 	}
 
 	return opts
+}
+
+// TODO: parse peer info into hotstuff/config.ReplicaConfig and pass that struct into NewReplicationServer()
+func getReplicaConfig(opts *options) *hsconfig.ReplicaConfig {
+	return &hsconfig.ReplicaConfig{}
 }
 
 func main() {

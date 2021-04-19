@@ -16,7 +16,7 @@ import (
 	"github.com/niclabs/tcrsa"
 	"google.golang.org/protobuf/proto"
 
-	serial "example/threshold/crypto/serialization"
+	serial "github.com/raphasch/hotcertification/crypto/serialization"
 )
 
 const thresholdKeyFileType = "HOTCERTIFICATION THRESHOLD KEY"

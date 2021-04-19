@@ -10,7 +10,7 @@ import (
 
 	"github.com/niclabs/tcrsa"
 
-	"example/threshold/crypto"
+	"github.com/raphasch/hotcertification/crypto"
 )
 
 const (

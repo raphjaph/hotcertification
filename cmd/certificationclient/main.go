@@ -21,19 +21,19 @@ import (
 	"github.com/spf13/viper"
 	"google.golang.org/grpc"
 
-	pb "example/threshold/client"
-	"example/threshold/crypto"
+	pb "github.com/raphasch/hotcertification/client"
+	"github.com/raphasch/hotcertification/crypto"
 )
 
 type options struct {
-	TLS        bool   `mapstructure:"tls"`
-	RootCA     string `mapstructure:"root-ca"`
-	ServerAddr string `mapstructure:"server-addr"`
-	Output     string `mapstructure:"output"`
+	TLS         bool   `mapstructure:"tls"`
+	RootCA      string `mapstructure:"root-ca"`
+	ServerAddr  string `mapstructure:"server-addr"`
+	Destination string `mapstructure:"destination"`
 }
 
 func usage() {
-	fmt.Printf("Usage: %s [options]\n", os.Args[0])
+	fmt.Printf("Usage: %s [options] [destination]\n", os.Args[0])
 	fmt.Println()
 	fmt.Println("Options:")
 	flag.PrintDefaults()
@@ -41,16 +41,24 @@ func usage() {
 
 func parseOptions() options {
 	flag.Usage = usage
+
 	help := flag.BoolP("help", "h", false, "Prints this text.")
+
 	flag.Bool("tls", false, "Connection uses TLS if true, else plain TCP")
 	flag.String("root-ca", "", "The file containing the root CA  cert file")
 	flag.String("server-addr", "localhost:8081", "The server address in the format of host:port")
-	flag.String("output", "", "The file to which the certificate is written")
+
 	flag.Parse()
 
 	if *help {
-		flag.Usage()
+		usage()
 		os.Exit(0)
+	}
+
+	if flag.NArg() < 1 {
+		fmt.Println("Please specify where the certificate file should be written")
+		usage()
+		os.Exit(1)
 	}
 
 	err := viper.BindPFlags(flag.CommandLine)
@@ -64,6 +72,8 @@ func parseOptions() options {
 		log.Print(err)
 		os.Exit(1)
 	}
+
+	opts.Destination = flag.Arg(0)
 
 	return opts
 }
@@ -131,9 +141,8 @@ func main() {
 	// TODO: verify signature with root certificate
 
 	// Write certificate to file
-	if opts.Output != "" {
-		crypto.WriteCertFile(certificate, opts.Output)
-	}
+
+	crypto.WriteCertFile(certificate, opts.Destination)
 
 	fmt.Println("Wrote certificate to file")
 

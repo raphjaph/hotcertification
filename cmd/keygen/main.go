@@ -13,6 +13,8 @@
 		5. Marshall/Write root cert, tls certs, hotstuff priv and pub keys and threshold keys to files
 */
 
+// TODO: add keygen functions for HotStuff
+
 package main
 
 import (
@@ -23,7 +25,7 @@ import (
 	flag "github.com/spf13/pflag"
 	"github.com/spf13/viper"
 
-	"example/threshold/crypto"
+	"github.com/raphasch/hotcertification/crypto"
 )
 
 type options struct {

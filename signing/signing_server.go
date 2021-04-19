@@ -12,7 +12,7 @@ import (
 	"github.com/relab/gorums"
 	"google.golang.org/grpc"
 
-	"example/threshold/crypto"
+	"github.com/raphasch/hotcertification/crypto"
 )
 
 type signingServer struct {
