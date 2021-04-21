@@ -11,7 +11,10 @@
 package replication
 
 import (
+	"context"
 	"fmt"
+	"log"
+	"net"
 	"os"
 	"sync"
 	"time"
@@ -22,29 +25,13 @@ import (
 	"github.com/relab/hotstuff/consensus/chainedhotstuff"
 	"github.com/relab/hotstuff/crypto"
 	"github.com/relab/hotstuff/crypto/ecdsa"
+	"github.com/relab/hotstuff/crypto/keygen"
 	"github.com/relab/hotstuff/leaderrotation"
+
+	hc "github.com/raphasch/hotcertification"
+	"github.com/raphasch/hotcertification/logging"
+	"github.com/raphasch/hotcertification/options"
 )
-
-type options struct {
-	// The ID of this server
-	ID int `mapstructure:"id"`
-
-	// TLS configs
-	RootCA  string `mapstructure:"root-ca"`
-	TLS     bool   `mapstructure:"tls"`
-	PrivKey string `mapstructure:"privkey"` // privkey has to belong the to the pubkey and should be ecdsa because thresholdkey can't do TLS
-
-	// HotStuff configs
-	PmType      string      `mapstructure:"pacemaker"`
-	LeaderID    hotstuff.ID `mapstructure:"leader-id"`
-	ViewTimeout int         `mapstructure:"view-timeout"`
-
-	// HotCertification and miscellaneous configs
-	ThresholdKey string `mapstructure:"thresholdkey"`
-	KeySize      int    `mapstructure:"key-size"`
-	ConfigFile   string `mapstructure:"config"`
-	//Peers        []peer
-}
 
 // reqID is a unique identifier for a command
 // TODO: use fingerprint of
@@ -60,7 +47,7 @@ type replicationServer struct {
 	hs             *hotstuff.HotStuff       // the byzantine fault tolerant replication (consensus) algorithm
 	hsSrv          *hotstuffbackend.Server  // the transport backend for the consensus algorithm
 	mgr            *hotstuffbackend.Manager // manages the connections to the other peers/replicas in the network
-	reqBuffer      *reqBuffer               // the request buffer (CSRs); passed in from client server
+	ReqBuffer      *hc.ReqBuffer            // the request buffer (CSRs); passed in from client server
 	mut            sync.Mutex
 	replicatedReqs chan struct{} // TODO: change from struct{} to *client.CSR or *x509.CertificateRequest. Can I put anything into a chan struct{} and then transform at the other end through reflection
 	//finishedReqs map[reqID]chan struct{} // signalling channel
@@ -68,10 +55,12 @@ type replicationServer struct {
 	lastExecTime int64
 }
 
-func NewReplicationServer(opts *options, replicaConfig *hsconfig.ReplicaConfig, replicatedRequests chan struct{}) *replicationServer {
+func NewReplicationServer(opts *options.Options, reqBuffer *hc.ReqBuffer, replicatedRequests chan struct{}) *replicationServer {
+
+	replicaConfig := createReplicaConfig(opts)
 
 	srv := &replicationServer{
-		reqBuffer:      NewReqBuffer(100),
+		ReqBuffer:      reqBuffer,
 		replicatedReqs: replicatedRequests,
 	}
 
@@ -106,12 +95,85 @@ func NewReplicationServer(opts *options, replicaConfig *hsconfig.ReplicaConfig, 
 		crypto.NewCache(cryptoImpl, 2*srv.mgr.Len()),
 		leaderRotation,
 		srv,           // executor
-		srv.reqBuffer, // acceptor and command queue
-		//logging.New(fmt.Sprintf("hs%d", conf.SelfID)),
+		srv.ReqBuffer, // acceptor and command queue
+		logging.New(fmt.Sprintf("HOTSTUFF LOG%d:", opts.ID)),
 	)
 	srv.hs = builder.Build()
 
 	return srv
+}
+
+// TODO: parse peer info into hotstuff/config.ReplicaConfig and pass that struct into NewReplicationServer()
+func createReplicaConfig(opts *options.Options) *hsconfig.ReplicaConfig {
+	// Read the HotStuff ecdsa private key
+	privKey, err := keygen.ReadPrivateKeyFile(opts.PrivKey)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to read private key file: %v\n", err)
+		os.Exit(1)
+	}
+
+	// Ignoring TLS for now
+	replicaConfig := hsconfig.NewConfig(opts.ID, privKey, nil)
+	for _, p := range opts.Peers {
+		key, err := keygen.ReadPublicKeyFile(p.PubKey)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to read public key file '%s': %v\n", p.PubKey, err)
+			os.Exit(1)
+		}
+
+		info := &hsconfig.ReplicaInfo{
+			ID:      p.ID,
+			Address: p.ReplicationPeerAddr,
+			PubKey:  key,
+		}
+
+		replicaConfig.Replicas[p.ID] = info
+	}
+
+	return replicaConfig
+}
+
+func (srv *replicationServer) Start(ctx context.Context, addr string) (err error) {
+	lis, err := net.Listen("tcp", addr)
+	if err != nil {
+		return err
+	}
+
+	srv.hsSrv.StartOnListener(lis)
+
+	err = srv.mgr.Connect(10 * time.Second)
+	if err != nil {
+		return err
+	}
+
+	// sleep so that all replicas can be ready before we start
+	time.Sleep(time.Second)
+
+	c := make(chan struct{})
+	go func() {
+		srv.hs.EventLoop().Run(ctx)
+		close(c)
+	}()
+
+	log.Printf("Replication server listening on %v.\n", addr)
+
+	// wait for the event loop to exit
+	<-c
+	return nil
+}
+
+func (srv *replicationServer) Stop() {
+	srv.hs.ViewSynchronizer().Stop()
+	srv.mgr.Close()
+	srv.hsSrv.Stop()
+}
+
+func (srv *replicationServer) Exec(cmd hotstuff.Command) {
+	if cmd != "" {
+		log.Println(cmd)
+		log.Println("Replication finished. Writing to database")
+		srv.replicatedReqs <- struct{}{}
+	}
 }
 
 /*

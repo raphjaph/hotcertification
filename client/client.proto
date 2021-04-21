@@ -7,9 +7,13 @@ service Certification {
 }
 
 message CSR {
-    bytes CSR = 1;
+    uint32 ClientID = 1;
+    uint64 SequenceNumber = 2;
+    bytes CSR = 3;
 }
 
 message Certificate {
     bytes Certificate = 1;
 }
+
+message Batch { repeated CSR CSRs = 1; }

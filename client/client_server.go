@@ -18,12 +18,12 @@ import (
 )
 
 type clientServer struct {
-	pendingCSRs   chan *x509.CertificateRequest
+	pendingCSRs   chan *CSR
 	finishedCerts chan *x509.Certificate
 	backendSrv    *grpc.Server
 }
 
-func NewClientServer(pendingCSRs chan *x509.CertificateRequest, finishedCerts chan *x509.Certificate) *clientServer {
+func NewClientServer(pendingCSRs chan *CSR, finishedCerts chan *x509.Certificate) *clientServer {
 
 	var opts []grpc.ServerOption
 	grpcServer := grpc.NewServer(opts...)
@@ -45,12 +45,8 @@ func (srv *clientServer) GetCertificate(_ context.Context, csr *CSR) (*Certifica
 
 	log.Println("Received CSR")
 
-	certRequest, err := x509.ParseCertificateRequest(csr.CSR)
-	if err != nil {
-		return nil, err
-	}
 	// send to signing server
-	srv.pendingCSRs <- certRequest
+	srv.pendingCSRs <- csr
 
 	// wait for fully signed certificate
 	certificate := <-srv.finishedCerts
@@ -60,15 +56,15 @@ func (srv *clientServer) GetCertificate(_ context.Context, csr *CSR) (*Certifica
 	return &Certificate{Certificate: certificate.Raw}, nil
 }
 
-func (srv *clientServer) Start(port int) {
+func (srv *clientServer) Start(addr string) {
 
 	// open port
-	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
+	lis, err := net.Listen("tcp", addr)
 	if err != nil {
 		fmt.Println(err)
 	}
 
-	log.Printf("Client server listening on port %v.\n", port)
+	log.Printf("Client server listening on %v.\n", addr)
 
 	srv.backendSrv.Serve(lis)
 }

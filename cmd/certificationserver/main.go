@@ -20,50 +20,17 @@ import (
 	"log"
 	"os"
 	"os/signal"
-	"strconv"
-	"strings"
 
-	"github.com/relab/hotstuff"
-	hsconfig "github.com/relab/hotstuff/config"
 	flag "github.com/spf13/pflag"
 	"github.com/spf13/viper"
 
+	hc "github.com/raphasch/hotcertification"
 	"github.com/raphasch/hotcertification/client"
 	"github.com/raphasch/hotcertification/crypto"
+	"github.com/raphasch/hotcertification/options"
+	"github.com/raphasch/hotcertification/replication"
 	"github.com/raphasch/hotcertification/signing"
 )
-
-// Information other replicas in network have to know about each other (public knowledge)
-// Private knowledge (threshold key, ecdsa private key) have to given through command line and not in global config file
-type peer struct {
-	ID                  hotstuff.ID
-	PubKey              string `mapstructure:"pubkey"`
-	TLSCert             string `mapstructure:"tls-cert"`
-	ClientAddr          string `mapstructure:"client-address"`
-	ReplicationPeerAddr string `mapstructure:"replication-peer-address"`
-	SigningPeerAddr     string `mapstructure:"signing-peer-address"`
-}
-
-type options struct {
-	// The ID of this server
-	ID int `mapstructure:"id"`
-
-	// TLS configs
-	RootCA  string `mapstructure:"root-ca"`
-	TLS     bool   `mapstructure:"tls"`
-	PrivKey string `mapstructure:"privkey"` // privkey has to belong the to the pubkey and should be ecdsa because thresholdkey can't do TLS
-
-	// HotStuff configs
-	PmType      string      `mapstructure:"pacemaker"`
-	LeaderID    hotstuff.ID `mapstructure:"leader-id"`
-	ViewTimeout int         `mapstructure:"view-timeout"`
-
-	// HotCertification and miscellaneous configs
-	ThresholdKey string `mapstructure:"thresholdkey"`
-	KeySize      int    `mapstructure:"key-size"`
-	ConfigFile   string `mapstructure:"config"`
-	Peers        []peer
-}
 
 func usage() {
 	fmt.Printf("Usage: %s [options]\n", os.Args[0])
@@ -74,16 +41,16 @@ func usage() {
 	flag.PrintDefaults()
 }
 
-func parseOptionsAndConfig() options {
+func parseOptionsAndConfig() *options.Options {
 	flag.Usage = usage
 
 	help := flag.BoolP("help", "h", false, "Prints this text.")
 	config := flag.String("config", "", "The path to the config file in case it isn't in working directory.")
 	thresholdkey := flag.String("thresholdkey", "", "The path to the threshold key file")
 	id := flag.Int("id", 0, "The ID of this server.")
+	flag.String("privkey", "", "The path to the ecdsa private key file used for TLS and HotStuff")
 
 	//tls := flag.Bool("tls", false, "Connection uses TLS if true, else plain TCP")
-	//privkey := flag.String("privkey", "", "The path to the private key used for TLS")
 
 	flag.Parse()
 
@@ -137,19 +104,14 @@ func parseOptionsAndConfig() options {
 		}
 	}
 
-	var opts options
+	var opts options.Options
 	err = viper.Unmarshal(&opts)
 	if err != nil {
 		log.Print(err)
 		os.Exit(1)
 	}
 
-	return opts
-}
-
-// TODO: parse peer info into hotstuff/config.ReplicaConfig and pass that struct into NewReplicationServer()
-func getReplicaConfig(opts *options) *hsconfig.ReplicaConfig {
-	return &hsconfig.ReplicaConfig{}
+	return &opts
 }
 
 func main() {
@@ -172,9 +134,11 @@ func main() {
 	}
 
 	// TODO: What should channel capacity be?
-	pendingCSRs := make(chan *x509.CertificateRequest, 10)
+	pendingCSRs := make(chan *client.CSR, 10)
 	pendingCerts := make(chan *x509.Certificate, 10)
 	finishedCerts := make(chan *x509.Certificate, 10)
+	// signalling channel
+	replicatedReqs := make(chan struct{}, 10)
 
 	log.Println("Setting up servers.")
 
@@ -183,22 +147,17 @@ func main() {
 	for i, peer := range opts.Peers {
 		signingPeers[i] = peer.SigningPeerAddr
 	}
+
+	// instantiating request buffer
+	reqBuffer := hc.NewReqBuffer()
+
+	replicationServer := replication.NewReplicationServer(opts, reqBuffer, replicatedReqs)
 	signingServer := signing.NewSigningServer(thresholdKey, signingPeers, pendingCerts, finishedCerts)
 	clientServer := client.NewClientServer(pendingCSRs, finishedCerts)
 
-	signingPort, err := strconv.Atoi(strings.Split(opts.Peers[opts.ID-1].SigningPeerAddr, ":")[1])
-	if err != nil {
-		log.Println(err)
-	}
-	go signingServer.Start(signingPort)
-
-	clientPort, err := strconv.Atoi(strings.Split(opts.Peers[opts.ID-1].ClientAddr, ":")[1])
-	if err != nil {
-		log.Println(err)
-	}
-	go clientServer.Start(clientPort)
-
-	log.Println("Started server go routines.")
+	go replicationServer.Start(ctx, opts.Peers[opts.ID-1].ReplicationPeerAddr)
+	go signingServer.Start(opts.Peers[opts.ID-1].SigningPeerAddr)
+	go clientServer.Start(opts.Peers[opts.ID-1].ClientAddr)
 
 	// The logic for validating a csr and transforming into certificate
 	// need root cert for this
@@ -210,8 +169,21 @@ func main() {
 	}
 
 	csr := <-pendingCSRs
+
+	log.Println("Replicating CSR")
+	// replicate ?and validate?
+	replicationServer.ReqBuffer.AddRequest(csr)
+	// wait for replication finished
+	<-replicatedReqs
+
+	// starting signing process
 	log.Println("Processing CSR.")
-	cert, err := crypto.GenerateCert(csr, rootCA, thresholdKey)
+	x509_csr, err := x509.ParseCertificateRequest(csr.CSR)
+	if err != nil {
+		log.Println(err)
+	}
+
+	cert, err := crypto.GenerateCert(x509_csr, rootCA, thresholdKey)
 	if err != nil {
 		log.Println(err)
 	}

@@ -22,6 +22,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/relab/hotstuff/crypto/keygen"
 	flag "github.com/spf13/pflag"
 	"github.com/spf13/viper"
 
@@ -81,11 +82,17 @@ func parseOptions() (options, string) {
 func main() {
 	opts, dest := parseOptions()
 
-	fmt.Println("Generating all threshold keys and certificates...")
+	fmt.Println("Generating all threshold keys and root certificate.")
 
 	// Generates the threshold keys and a root certificate and writes all to seperate files
 	err := crypto.GenerateConfiguration(opts.Threshold, opts.Num, opts.KeySize, dest)
 	if err != nil {
 		fmt.Print(err)
 	}
+
+	fmt.Println("Generating all private keys and TLS certificates.")
+
+	// Generates ecdsa private keys for HotStuff/Replication server
+	keygen.GenerateConfiguration(dest, false, false, 1, int(opts.Num), "p*", []string{"localhost:8080"})
+
 }

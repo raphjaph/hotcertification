@@ -5,7 +5,7 @@ root-ca: keys/root.crt
 # HotStuff config options
 pacemaker: "round-robin"
 leader-id: 1
-view-timeout: 1000
+view-timeout: 100
 
 # Size of RSA key that certificates are signed with
 # must be same size as set when generating keys with keygen.go executable
@@ -14,21 +14,21 @@ key-size: 512
 peers: 
   - p1:
     id: 1
-    pubkey: "keys/p1.pubkey"
+    pubkey: "keys/p1.key.pub"
     tls-cert: "keys/p1.crt"
     client-address: "127.0.0.1:8081"
     replication-peer-address: "127.0.0.1:13371"
     signing-peer-address: "127.0.0.1:23371"
   - p2:
     id: 2
-    pubkey: "keys/p2.pubkey"
+    pubkey: "keys/p2.key.pub"
     tls-cert: "keys/p2.crt"
     client-address: "127.0.0.1:8082"
     replication-peer-address: "127.0.0.1:13372"
     signing-peer-address: "127.0.0.1:23372"
   - p3:
     id: 3
-    pubkey: "keys/p3.pubkey"
+    pubkey: "keys/p3.key.pub"
     tls-cert: "keys/p3.crt"
     client-address: "127.0.0.1:8083"
     replication-peer-address: "127.0.0.1:13373"

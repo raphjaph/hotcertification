@@ -122,11 +122,15 @@ func main() {
 	}
 
 	// Adding some context
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
 
 	// putting CSR into protocol buffers format and calling remote function
-	response, err := client.GetCertificate(ctx, &pb.CSR{CSR: clientCSR.Raw})
+	response, err := client.GetCertificate(ctx, &pb.CSR{
+		ClientID:       1,
+		SequenceNumber: 1,
+		CSR:            clientCSR.Raw,
+	})
 	if err != nil {
 		log.Fatalf("failed to call RPC: %v", err)
 		return

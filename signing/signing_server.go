@@ -117,14 +117,14 @@ func (srv *signingServer) CallGetPartialSig(cert *x509.Certificate) (partialSigs
 	return partialSigs, nil
 }
 
-func (srv *signingServer) Start(port int) {
+func (srv *signingServer) Start(addr string) {
 	// open port
-	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
+	lis, err := net.Listen("tcp", addr)
 	if err != nil {
 		fmt.Println(err)
 	}
 
-	log.Printf("Signing server listening on port %v.\n", port)
+	log.Printf("Signing server listening on %v.\n", addr)
 
 	srv.backendSrv.Serve(lis)
 }
