@@ -8,7 +8,7 @@ leader-id: 1
 view-timeout: 100
 
 # Size of RSA key that certificates are signed with
-# must be same size as set when generating keys with keygen.go executable
+# must be same size as set when generating keys with keygen executable
 key-size: 512
 
 peers: 
@@ -33,3 +33,10 @@ peers:
     client-address: "127.0.0.1:8083"
     replication-peer-address: "127.0.0.1:13373"
     signing-peer-address: "127.0.0.1:23373"
+  - p4:
+    id: 4
+    pubkey: "keys/p4.key.pub"
+    tls-cert: "keys/p4.crt"
+    client-address: "127.0.0.1:8084"
+    replication-peer-address: "127.0.0.1:13374"
+    signing-peer-address: "127.0.0.1:23374"

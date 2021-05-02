@@ -15,7 +15,6 @@ package main
 
 import (
 	"context"
-	"crypto/x509"
 	"fmt"
 	"log"
 	"os"
@@ -25,7 +24,6 @@ import (
 	"github.com/spf13/viper"
 
 	hc "github.com/raphasch/hotcertification"
-	"github.com/raphasch/hotcertification/client"
 	"github.com/raphasch/hotcertification/crypto"
 	"github.com/raphasch/hotcertification/options"
 	"github.com/raphasch/hotcertification/replication"
@@ -115,12 +113,6 @@ func parseOptionsAndConfig() *options.Options {
 }
 
 func main() {
-	/*
-		1. Read keys from command line
-		2. Store in server struct
-		3. Start threshold signing backend
-		4. Start client server
-	*/
 	opts := parseOptionsAndConfig()
 
 	// so program can be stopped with CTRL+C
@@ -133,14 +125,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	// TODO: What should channel capacity be?
-	pendingCSRs := make(chan *client.CSR, 10)
-	pendingCerts := make(chan *x509.Certificate, 10)
-	finishedCerts := make(chan *x509.Certificate, 10)
-	// signalling channel
-	replicatedReqs := make(chan struct{}, 10)
-
-	log.Println("Setting up servers.")
+	coordinator := hc.NewCoordinator()
+	//cmdCache := hc.NewCmdCache(1)
 
 	// Parsing signing peer information
 	signingPeers := make([]string, len(opts.Peers))
@@ -148,58 +134,13 @@ func main() {
 		signingPeers[i] = peer.SigningPeerAddr
 	}
 
-	// instantiating request buffer
-	reqBuffer := hc.NewReqBuffer()
-
-	replicationServer := replication.NewReplicationServer(opts, reqBuffer, replicatedReqs)
-	signingServer := signing.NewSigningServer(thresholdKey, signingPeers, pendingCerts, finishedCerts)
-	clientServer := client.NewClientServer(pendingCSRs, finishedCerts)
+	replicationServer := replication.NewReplicationServer(coordinator, opts)
+	signingServer := signing.NewSigningServer(coordinator, thresholdKey, signingPeers, opts.RootCA)
+	clientServer := NewClientServer(coordinator)
 
 	go replicationServer.Start(ctx, opts.Peers[opts.ID-1].ReplicationPeerAddr)
 	go signingServer.Start(opts.Peers[opts.ID-1].SigningPeerAddr)
 	go clientServer.Start(opts.Peers[opts.ID-1].ClientAddr)
-
-	// The logic for validating a csr and transforming into certificate
-	// need root cert for this
-	// This logic is only executed by the server that directly handles the client's request
-
-	rootCA, err := crypto.ReadCertFile(opts.RootCA)
-	if err != nil {
-		log.Println(err)
-	}
-
-	csr := <-pendingCSRs
-
-	log.Println("Replicating CSR")
-	// replicate ?and validate?
-	replicationServer.ReqBuffer.AddRequest(csr)
-	// wait for replication finished
-	<-replicatedReqs
-
-	// starting signing process
-	log.Println("Processing CSR.")
-	x509_csr, err := x509.ParseCertificateRequest(csr.CSR)
-	if err != nil {
-		log.Println(err)
-	}
-
-	cert, err := crypto.GenerateCert(x509_csr, rootCA, thresholdKey)
-	if err != nil {
-		log.Println(err)
-	}
-
-	partialSigs, err := signingServer.CallGetPartialSig(cert)
-	if err != nil {
-		log.Println("Failed to collect enough partial signatures: ", err)
-	}
-
-	log.Println("Computing full signature for certificate.")
-	fullCert, err := crypto.ComputeFullySignedCert(cert, thresholdKey, partialSigs...)
-	if err != nil {
-		log.Println("Failed to compute full signature: ", err)
-	}
-
-	finishedCerts <- fullCert
 
 	<-ctx.Done()
 }

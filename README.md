@@ -2,6 +2,8 @@
 
 ## TODO
 
+- [] rename Coordinator -> Hotcertification
+- [] merge/put in same dir coordinator.go and options.go (Because they outline how hotcertification works)
 - [] add [database](https://github.com/gostor/awesome-go-storage) or
   [interface](https://github.com/philippgille/gokv) to database or check out
   [sqlite](https://www.sqlite.org/index.html)
@@ -13,6 +15,7 @@
 
 ## Logging and Configuration
 
+- [] add a custom level to the log -> APPLICATION/CERTIFICATION; refactor code accordingly
 - [] find out how to show logs from internal consensus protocol and client facing
 server; pipe HS log into my logger
 - [] change hotstuff.toml to hotstuff.yml see [here](https://stackoverflow.com/questions/33989612/yaml-equivalent-of-array-of-objects-in-json)

@@ -21,8 +21,8 @@ import (
 	"github.com/spf13/viper"
 	"google.golang.org/grpc"
 
-	pb "github.com/raphasch/hotcertification/client"
 	"github.com/raphasch/hotcertification/crypto"
+	pb "github.com/raphasch/hotcertification/protocol"
 )
 
 type options struct {
@@ -104,7 +104,7 @@ func main() {
 		return
 	}
 	defer conn.Close()
-	client := pb.NewCertificationClient(conn)
+	hotcertification := pb.NewCertificationClient(conn)
 
 	// generate private and public key for certificate
 	keySize := 512
@@ -126,10 +126,9 @@ func main() {
 	defer cancel()
 
 	// putting CSR into protocol buffers format and calling remote function
-	response, err := client.GetCertificate(ctx, &pb.CSR{
-		ClientID:       1,
-		SequenceNumber: 1,
-		CSR:            clientCSR.Raw,
+	response, err := hotcertification.GetCertificate(ctx, &pb.CSR{
+		ClientID:           8,
+		CertificateRequest: clientCSR.Raw,
 	})
 	if err != nil {
 		log.Fatalf("failed to call RPC: %v", err)

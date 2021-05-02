@@ -13,7 +13,6 @@ package replication
 import (
 	"context"
 	"fmt"
-	"log"
 	"net"
 	"os"
 	"sync"
@@ -29,16 +28,8 @@ import (
 	"github.com/relab/hotstuff/leaderrotation"
 
 	hc "github.com/raphasch/hotcertification"
-	"github.com/raphasch/hotcertification/logging"
 	"github.com/raphasch/hotcertification/options"
 )
-
-// reqID is a unique identifier for a command
-// TODO: use fingerprint of
-type reqID struct {
-	clientID    uint64
-	sequenceNum uint64
-}
 
 // This implements the Certification interface from the certification_gorums.pb.go (protocol.Certification)
 // This struct holds all the data/variables a certificationServer needs
@@ -47,7 +38,7 @@ type replicationServer struct {
 	hs             *hotstuff.HotStuff       // the byzantine fault tolerant replication (consensus) algorithm
 	hsSrv          *hotstuffbackend.Server  // the transport backend for the consensus algorithm
 	mgr            *hotstuffbackend.Manager // manages the connections to the other peers/replicas in the network
-	ReqBuffer      *hc.ReqBuffer            // the request buffer (CSRs); passed in from client server
+	coordinator    *hc.Coordinator
 	mut            sync.Mutex
 	replicatedReqs chan struct{} // TODO: change from struct{} to *client.CSR or *x509.CertificateRequest. Can I put anything into a chan struct{} and then transform at the other end through reflection
 	//finishedReqs map[reqID]chan struct{} // signalling channel
@@ -55,13 +46,12 @@ type replicationServer struct {
 	lastExecTime int64
 }
 
-func NewReplicationServer(opts *options.Options, reqBuffer *hc.ReqBuffer, replicatedRequests chan struct{}) *replicationServer {
+func NewReplicationServer(coordinator *hc.Coordinator, opts *options.Options) *replicationServer {
 
 	replicaConfig := createReplicaConfig(opts)
 
 	srv := &replicationServer{
-		ReqBuffer:      reqBuffer,
-		replicatedReqs: replicatedRequests,
+		coordinator: coordinator,
 	}
 
 	// building the hotstuff consensus algorithm
@@ -94,9 +84,9 @@ func NewReplicationServer(opts *options.Options, reqBuffer *hc.ReqBuffer, replic
 		consensus,
 		crypto.NewCache(cryptoImpl, 2*srv.mgr.Len()),
 		leaderRotation,
-		srv,           // executor
-		srv.ReqBuffer, // acceptor and command queue
-		logging.New(fmt.Sprintf("HOTSTUFF LOG%d:", opts.ID)),
+		coordinator, // executor
+		coordinator, // acceptor and command queue
+		coordinator.Log,
 	)
 	srv.hs = builder.Build()
 
@@ -155,7 +145,7 @@ func (srv *replicationServer) Start(ctx context.Context, addr string) (err error
 		close(c)
 	}()
 
-	log.Printf("Replication server listening on %v.\n", addr)
+	srv.coordinator.Log.Infof("Replication server listening on %v.", addr)
 
 	// wait for the event loop to exit
 	<-c
@@ -168,15 +158,22 @@ func (srv *replicationServer) Stop() {
 	srv.hsSrv.Stop()
 }
 
+/*
 func (srv *replicationServer) Exec(cmd hotstuff.Command) {
-	if cmd != "" {
-		log.Println(cmd)
-		log.Println("Replication finished. Writing to database")
+	batch := new(client.Batch)
+	err := srv.ReqBuffer.Unmarshaler.Unmarshal([]byte(cmd), batch)
+	if err != nil {
+		log.Printf("Failed to unmarshal batch: %v", err)
+	}
+	for _, csr := range batch.GetCSRs() {
+		srv.coordinator.Log.Error("Replication finished. Writing to database")
+		srv.ReqBuffer.Database[hc.ReqID{csr.ClientID, csr.SequenceNumber}] = &hc.Request{}
 		srv.replicatedReqs <- struct{}{}
 	}
+
 }
 
-/*
+
 func (certSrv *replicationServer) GetCertificate(_ context.Context, req *protocol.Request, out func(*protocol.Reply, error)) {
 	// channel for signalling purpose (check if command done with consensus phase) and synchronization
 	finished := make(chan struct{})

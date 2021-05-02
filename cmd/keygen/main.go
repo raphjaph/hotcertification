@@ -48,8 +48,8 @@ func parseOptions() (options, string) {
 
 	flag.Usage = usage
 	help := flag.BoolP("help", "h", false, "Prints this text.")
-	flag.Uint16("num", 3, "The number of replicas to generate keys/certs for.")
-	flag.Uint16("threshold", 2, "The threshold of replicas that can generate a valid signature on a certificate.")
+	flag.Uint16P("num", "n", 3, "The number of replicas to generate keys/certs for.")
+	flag.Uint16P("threshold", "t", 2, "The threshold of replicas that can generate a valid signature on a certificate.")
 	flag.Int("key-size", 512, "The size of the RSA private key from which the threshold keys are generated. Has to be one of 512/1024/2048/4096.")
 	flag.Parse()
 

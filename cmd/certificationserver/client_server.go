@@ -5,35 +5,36 @@
 		3. Waits for full signed certificate on other channel
 		4. Serializes fully signed certificate and returns it back to client
 */
-package client
+package main
 
 import (
 	"context"
-	"crypto/x509"
 	"fmt"
-	"log"
 	"net"
 
+	hc "github.com/raphasch/hotcertification"
+	"github.com/raphasch/hotcertification/protocol"
 	"google.golang.org/grpc"
 )
 
 type clientServer struct {
-	pendingCSRs   chan *CSR
-	finishedCerts chan *x509.Certificate
-	backendSrv    *grpc.Server
+	backendSrv  *grpc.Server
+	coordinator *hc.Coordinator
+
+	// gRPC stuff for backward compatability
+	protocol.UnimplementedCertificationServer
 }
 
-func NewClientServer(pendingCSRs chan *CSR, finishedCerts chan *x509.Certificate) *clientServer {
+func NewClientServer(coordinator *hc.Coordinator) *clientServer {
 
 	var opts []grpc.ServerOption
 	grpcServer := grpc.NewServer(opts...)
 	clientSrv := &clientServer{
-		pendingCSRs:   pendingCSRs,
-		finishedCerts: finishedCerts,
-		backendSrv:    grpcServer,
+		backendSrv:  grpcServer,
+		coordinator: coordinator,
 	}
 
-	RegisterCertificationServer(grpcServer, clientSrv)
+	protocol.RegisterCertificationServer(grpcServer, clientSrv)
 
 	return clientSrv
 }
@@ -41,19 +42,19 @@ func NewClientServer(pendingCSRs chan *CSR, finishedCerts chan *x509.Certificate
 // need this because [see here](https://stackoverflow.com/questions/65079032/grpc-with-mustembedunimplemented-method)
 func (srv *clientServer) mustEmbedUnimplementedCertificationServer() {}
 
-func (srv *clientServer) GetCertificate(_ context.Context, csr *CSR) (*Certificate, error) {
+func (srv *clientServer) GetCertificate(_ context.Context, csr *protocol.CSR) (*protocol.Certificate, error) {
 
-	log.Println("Received CSR")
+	srv.coordinator.Log.Info("Received CSR")
 
-	// send to signing server
-	srv.pendingCSRs <- csr
+	// First step; replication
+	srv.coordinator.AddRequest(csr)
 
 	// wait for fully signed certificate
-	certificate := <-srv.finishedCerts
+	certificate := <-srv.coordinator.FinishedCerts
 
-	log.Println("Returning fully signed certificate to client.")
+	srv.coordinator.Log.Info("Returning fully signed certificate to client.")
 
-	return &Certificate{Certificate: certificate.Raw}, nil
+	return certificate, nil
 }
 
 func (srv *clientServer) Start(addr string) {
@@ -64,7 +65,7 @@ func (srv *clientServer) Start(addr string) {
 		fmt.Println(err)
 	}
 
-	log.Printf("Client server listening on %v.\n", addr)
+	srv.coordinator.Log.Infof("Client server listening on %v.", addr)
 
 	srv.backendSrv.Serve(lis)
 }

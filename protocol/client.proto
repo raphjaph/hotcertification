@@ -1,6 +1,6 @@
 syntax = "proto3";
-package client;
-option go_package = "./example/threshold/client";
+package protocol;
+option go_package = "github.com/raphasch/hotcertification/protocol";
 
 service Certification {
     rpc GetCertificate(CSR) returns (Certificate) {}
@@ -8,8 +8,8 @@ service Certification {
 
 message CSR {
     uint32 ClientID = 1;
-    uint64 SequenceNumber = 2;
-    bytes CSR = 3;
+    bytes CertificateRequest = 3;
+    bytes ValidationInfo = 4;
 }
 
 message Certificate {
