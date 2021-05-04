@@ -15,7 +15,6 @@ import (
 	"fmt"
 	"net"
 	"os"
-	"sync"
 	"time"
 
 	"github.com/relab/hotstuff"
@@ -28,25 +27,18 @@ import (
 	"github.com/relab/hotstuff/leaderrotation"
 
 	hc "github.com/raphasch/hotcertification"
-	"github.com/raphasch/hotcertification/options"
 )
 
 // This implements the Certification interface from the certification_gorums.pb.go (protocol.Certification)
 // This struct holds all the data/variables a certificationServer needs
 type replicationServer struct {
-	//conf   *options
-	hs             *hotstuff.HotStuff       // the byzantine fault tolerant replication (consensus) algorithm
-	hsSrv          *hotstuffbackend.Server  // the transport backend for the consensus algorithm
-	mgr            *hotstuffbackend.Manager // manages the connections to the other peers/replicas in the network
-	coordinator    *hc.Coordinator
-	mut            sync.Mutex
-	replicatedReqs chan struct{} // TODO: change from struct{} to *client.CSR or *x509.CertificateRequest. Can I put anything into a chan struct{} and then transform at the other end through reflection
-	//finishedReqs map[reqID]chan struct{} // signalling channel
-
-	lastExecTime int64
+	hs          *hotstuff.HotStuff       // the byzantine fault tolerant replication (consensus) algorithm
+	hsSrv       *hotstuffbackend.Server  // the transport backend for the consensus algorithm
+	mgr         *hotstuffbackend.Manager // manages the connections to the other peers/replicas in the network
+	coordinator *hc.Coordinator
 }
 
-func NewReplicationServer(coordinator *hc.Coordinator, opts *options.Options) *replicationServer {
+func NewReplicationServer(coordinator *hc.Coordinator, opts *hc.Options) *replicationServer {
 
 	replicaConfig := createReplicaConfig(opts)
 
@@ -74,11 +66,11 @@ func NewReplicationServer(coordinator *hc.Coordinator, opts *options.Options) *r
 		fmt.Fprintf(os.Stderr, "Invalid pacemaker type: '%s'\n", opts.PmType)
 		os.Exit(1)
 	}
-	var consensus hotstuff.Consensus
-	consensus = chainedhotstuff.New()
+	//var consensus hotstuff.Consensus
+	consensus := chainedhotstuff.New()
 
-	var cryptoImpl hotstuff.CryptoImpl
-	cryptoImpl = ecdsa.New()
+	//var cryptoImpl hotstuff.CryptoImpl
+	cryptoImpl := ecdsa.New()
 
 	builder.Register(
 		consensus,
@@ -94,7 +86,7 @@ func NewReplicationServer(coordinator *hc.Coordinator, opts *options.Options) *r
 }
 
 // TODO: parse peer info into hotstuff/config.ReplicaConfig and pass that struct into NewReplicationServer()
-func createReplicaConfig(opts *options.Options) *hsconfig.ReplicaConfig {
+func createReplicaConfig(opts *hc.Options) *hsconfig.ReplicaConfig {
 	// Read the HotStuff ecdsa private key
 	privKey, err := keygen.ReadPrivateKeyFile(opts.PrivKey)
 	if err != nil {

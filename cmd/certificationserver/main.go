@@ -25,7 +25,6 @@ import (
 
 	hc "github.com/raphasch/hotcertification"
 	"github.com/raphasch/hotcertification/crypto"
-	"github.com/raphasch/hotcertification/options"
 	"github.com/raphasch/hotcertification/replication"
 	"github.com/raphasch/hotcertification/signing"
 )
@@ -39,7 +38,7 @@ func usage() {
 	flag.PrintDefaults()
 }
 
-func parseOptionsAndConfig() *options.Options {
+func parseOptionsAndConfig() *hc.Options {
 	flag.Usage = usage
 
 	help := flag.BoolP("help", "h", false, "Prints this text.")
@@ -102,7 +101,7 @@ func parseOptionsAndConfig() *options.Options {
 		}
 	}
 
-	var opts options.Options
+	var opts hc.Options
 	err = viper.Unmarshal(&opts)
 	if err != nil {
 		log.Print(err)

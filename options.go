@@ -1,4 +1,4 @@
-package options
+package hotcertification
 
 import (
 	"github.com/relab/hotstuff"
