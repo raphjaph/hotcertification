@@ -2,16 +2,16 @@
 
 ## TODO
 
-- [] rename Coordinator -> Hotcertification
-- [] merge/put in same dir coordinator.go and options.go (Because they outline how hotcertification works)
+- [] rename coordinator struct
+- [x] merge/put in same dir coordinator.go and options.go (Because they outline how hotcertification works)
 - [] add [database](https://github.com/gostor/awesome-go-storage) or
   [interface](https://github.com/philippgille/gokv) to database or check out
   [sqlite](https://www.sqlite.org/index.html)
-- [] add a Makefile, see [here](https://makefiletutorial.com/) for help
+- [x] add a Makefile, see [here](https://makefiletutorial.com/) for help
 - [] make event-driven architecture? -> more lightweight; look at Flow implementation
 - [] instead of ClientID and Sequence Number just use Hash of CSR to identify request (replaces CMDID data structure) -> use HashMap
 - [] slow down consensus rounds?
-- [] go run with SIGNALS
+- [x] go run with SIGNALS
 
 ## Logging and Configuration
 
