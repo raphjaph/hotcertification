@@ -4,7 +4,7 @@ export HOTSTUFF_LOG=info
 
 trap 'trap - SIGTERM && kill -- -$$' SIGINT SIGTERM EXIT
 
-bin='go run cmd/certificationserver/*.go'
+bin='cmd/certificationserver/certserver'
 
 $bin --id 1 --thresholdkey keys/p1.thresholdkey --privkey keys/p1.key &
 $bin --id 2 --thresholdkey keys/p2.thresholdkey --privkey keys/p2.key 2> logs/2.out &
