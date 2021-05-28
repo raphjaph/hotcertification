@@ -13,6 +13,10 @@
 - [] slow down consensus rounds?
 - [x] go run with SIGNALS
 
+## Testing
+
+- https://github.com/alexei-led/pumba
+
 ## Logging and Configuration
 
 - [] add a custom level to the log -> APPLICATION/CERTIFICATION; refactor code accordingly

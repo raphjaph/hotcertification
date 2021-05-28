@@ -25,6 +25,7 @@ import (
 	"github.com/relab/hotstuff/crypto/ecdsa"
 	"github.com/relab/hotstuff/crypto/keygen"
 	"github.com/relab/hotstuff/leaderrotation"
+	"github.com/relab/hotstuff/synchronizer"
 
 	hc "github.com/raphasch/hotcertification"
 )
@@ -32,9 +33,9 @@ import (
 // This implements the Certification interface from the certification_gorums.pb.go (protocol.Certification)
 // This struct holds all the data/variables a certificationServer needs
 type replicationServer struct {
-	hs          *hotstuff.HotStuff       // the byzantine fault tolerant replication (consensus) algorithm
-	hsSrv       *hotstuffbackend.Server  // the transport backend for the consensus algorithm
-	mgr         *hotstuffbackend.Manager // manages the connections to the other peers/replicas in the network
+	hs          *hotstuff.HotStuff      // the byzantine fault tolerant replication (consensus) algorithm
+	hsSrv       *hotstuffbackend.Server // the transport backend for the consensus algorithm
+	cfg         *hotstuffbackend.Config // manages the connections to the other peers/replicas in the network
 	coordinator *hc.Coordinator
 }
 
@@ -49,11 +50,11 @@ func NewReplicationServer(coordinator *hc.Coordinator, opts *hc.Options) *replic
 	// building the hotstuff consensus algorithm
 	builder := chainedhotstuff.DefaultModules(
 		*replicaConfig,
-		hotstuff.ExponentialTimeout{Base: time.Duration(opts.ViewTimeout) * time.Millisecond, ExponentBase: 2, MaxExponent: 8},
+		synchronizer.NewViewDuration(1000, float64(opts.ViewTimeout), 1.5),
 	)
-	srv.mgr = hotstuffbackend.NewManager(*replicaConfig)
+	srv.cfg = hotstuffbackend.NewConfig(*replicaConfig)
 	srv.hsSrv = hotstuffbackend.NewServer(*replicaConfig)
-	builder.Register(srv.mgr, srv.hsSrv)
+	builder.Register(srv.cfg, srv.hsSrv)
 
 	var leaderRotation hotstuff.LeaderRotation
 	switch opts.PmType {
@@ -74,7 +75,7 @@ func NewReplicationServer(coordinator *hc.Coordinator, opts *hc.Options) *replic
 
 	builder.Register(
 		consensus,
-		crypto.NewCache(cryptoImpl, 2*srv.mgr.Len()),
+		crypto.NewCache(cryptoImpl, 2*srv.cfg.Len()),
 		leaderRotation,
 		coordinator, // executor
 		coordinator, // acceptor and command queue
@@ -123,7 +124,7 @@ func (srv *replicationServer) Start(ctx context.Context, addr string) (err error
 
 	srv.hsSrv.StartOnListener(lis)
 
-	err = srv.mgr.Connect(10 * time.Second)
+	err = srv.cfg.Connect(10 * time.Second)
 	if err != nil {
 		return err
 	}
@@ -146,7 +147,7 @@ func (srv *replicationServer) Start(ctx context.Context, addr string) (err error
 
 func (srv *replicationServer) Stop() {
 	srv.hs.ViewSynchronizer().Stop()
-	srv.mgr.Close()
+	srv.cfg.Close()
 	srv.hsSrv.Stop()
 }
 

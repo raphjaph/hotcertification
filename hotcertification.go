@@ -82,7 +82,7 @@ func NewCoordinator() *Coordinator {
 }
 
 // InitModule gives the module a reference to the HotStuff object.
-func (c *Coordinator) InitModule(hs *hotstuff.HotStuff, _ *hotstuff.ConfigBuilder) {
+func (c *Coordinator) InitModule(hs *hotstuff.HotStuff, _ *hotstuff.OptionsBuilder) {
 	c.HS = hs
 }
 
