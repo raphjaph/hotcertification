@@ -93,6 +93,8 @@ func main() {
 	fmt.Println("Generating all private keys and TLS certificates.")
 
 	// Generates ecdsa private keys for HotStuff/Replication server
-	keygen.GenerateConfiguration(dest, false, false, 1, int(opts.Num), "p*", []string{"localhost:8080"})
-
+	err = keygen.GenerateConfiguration(dest, false, false, 1, int(opts.Num), "n*", []string{"localhost:8080"})
+	if err != nil {
+		fmt.Print(err)
+	}
 }

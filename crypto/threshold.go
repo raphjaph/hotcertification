@@ -344,7 +344,7 @@ This generates the necessary keys and certificates for issuing x509 certificates
 
 // put this function into threshold.go ?
 func GenerateConfiguration(t uint16, n uint16, keySize int, destination string) (err error) {
-	// create directory for keys
+	// create public directort that stores open knowledge like certs and public keys
 	err = os.MkdirAll(destination, 0755)
 	if err != nil {
 		return fmt.Errorf("cannot create '%s' directory: %w", destination, err)
@@ -358,8 +358,13 @@ func GenerateConfiguration(t uint16, n uint16, keySize int, destination string) 
 
 	// Write threshold keys to files
 	for i, key := range thresholdKeys {
-
-		thresholdKeyPath := filepath.Join(destination, fmt.Sprintf("p%v.thresholdkey", i+1))
+		// create directory for each private key
+		fp := filepath.Join(destination, fmt.Sprintf("/n%v", i+1))
+		err = os.MkdirAll(fp, 0755)
+		if err != nil {
+			return fmt.Errorf("cannot create '%s' directory: %w", destination, err)
+		}
+		thresholdKeyPath := filepath.Join(fp, fmt.Sprintf("n%v.thresholdkey", i+1))
 		err = WriteThresholdKeyFile(key, thresholdKeyPath)
 		if err != nil {
 			return err

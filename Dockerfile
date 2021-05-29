@@ -10,3 +10,5 @@ FROM alpine
 RUN apk add iproute2
 
 COPY --from=builder /go/bin/* /usr/bin/
+
+WORKDIR /home
