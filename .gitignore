@@ -4,3 +4,4 @@ logs/
 crypto/test_keys
 client.crt
 !/.gitignore
+!/.gitmodules

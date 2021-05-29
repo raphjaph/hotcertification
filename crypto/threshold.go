@@ -358,13 +358,10 @@ func GenerateConfiguration(t uint16, n uint16, keySize int, destination string) 
 
 	// Write threshold keys to files
 	for i, key := range thresholdKeys {
-		// create directory for each private key
-		fp := filepath.Join(destination, fmt.Sprintf("/n%v", i+1))
-		err = os.MkdirAll(fp, 0755)
 		if err != nil {
 			return fmt.Errorf("cannot create '%s' directory: %w", destination, err)
 		}
-		thresholdKeyPath := filepath.Join(fp, fmt.Sprintf("n%v.thresholdkey", i+1))
+		thresholdKeyPath := filepath.Join(destination, fmt.Sprintf("n%v.thresholdkey", i+1))
 		err = WriteThresholdKeyFile(key, thresholdKeyPath)
 		if err != nil {
 			return err
