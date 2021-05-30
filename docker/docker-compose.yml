@@ -2,25 +2,45 @@ version: "3"
 
 services:
   n1:
+    container_name: n1
     image: raphasch/hotcertification
     volumes:
       - ./keys/1:/home
+    ports:
+      - "8081"
+      - "13371"
+      - "23371"
     command: certificationserver --id 1 --thresholdkey n1.thresholdkey --privkey n1.key
 
   n2:
+    container_name: n2
     image: raphasch/hotcertification
     volumes:
       - ./keys/2:/home
+    ports:
+      - "8081"
+      - "13371"
+      - "23371"
     command: certificationserver --id 2 --thresholdkey n2.thresholdkey --privkey n2.key
 
   n3:
+    container_name: n3
     image: raphasch/hotcertification
     volumes:
       - ./keys/3:/home
+    ports:
+      - "8081"
+      - "13371"
+      - "23371"
     command: certificationserver --id 3 --thresholdkey n3.thresholdkey --privkey n3.key
 
   n4:
+    container_name: n4
     image: raphasch/hotcertification
     volumes:
       - ./keys/4:/home
+    ports:
+      - "8081"
+      - "13371"
+      - "23371"
     command: certificationserver --id 4 --thresholdkey n4.thresholdkey --privkey n4.key

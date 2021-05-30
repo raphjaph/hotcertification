@@ -1,6 +1,6 @@
 
 # For TLS 
-root-ca: root.crt
+root-ca: keys/root.crt
 
 # HotStuff config options
 pacemaker: "round-robin"
@@ -14,29 +14,29 @@ key-size: 512
 peers: 
   - n1:
     id: 1
-    pubkey: "n1.key.pub"
-    tls-cert: "n1.crt"
+    pubkey: "keys/n1.key.pub"
+    tls-cert: "keys/n1.crt"
     client-address: "127.0.0.1:8081"
     replication-peer-address: "127.0.0.1:13371"
     signing-peer-address: "127.0.0.1:23371"
   - n2:
     id: 2
-    pubkey: "n2.key.pub"
-    tls-cert: "n2.crt"
+    pubkey: "keys/n2.key.pub"
+    tls-cert: "keys/n2.crt"
     client-address: "127.0.0.1:8082"
     replication-peer-address: "127.0.0.1:13372"
     signing-peer-address: "127.0.0.1:23372"
   - n3:
     id: 3
-    pubkey: "n3.key.pub"
-    tls-cert: "n3.crt"
+    pubkey: "keys/n3.key.pub"
+    tls-cert: "keys/n3.crt"
     client-address: "127.0.0.1:8083"
     replication-peer-address: "127.0.0.1:13373"
     signing-peer-address: "127.0.0.1:23373"
   - n4:
     id: 4
-    pubkey: "n4.key.pub"
-    tls-cert: "n4.crt"
+    pubkey: "keys/n4.key.pub"
+    tls-cert: "keys/n4.crt"
     client-address: "127.0.0.1:8084"
     replication-peer-address: "127.0.0.1:13374"
     signing-peer-address: "127.0.0.1:23374"

@@ -1,0 +1,42 @@
+
+# For TLS 
+root-ca: root.crt
+
+# HotStuff config options
+pacemaker: "round-robin"
+leader-id: 1
+view-timeout: 100
+
+# Size of RSA key that certificates are signed with
+# must be same size as set when generating keys with keygen executable
+key-size: 512
+
+peers: 
+  - n1:
+    id: 1
+    pubkey: "n1.key.pub"
+    tls-cert: "n1.crt"
+    client-address: "n1:8081"
+    replication-peer-address: "n1:13371"
+    signing-peer-address: "n1:23371"
+  - n2:
+    id: 2
+    pubkey: "n2.key.pub"
+    tls-cert: "n2.crt"
+    client-address: "n2:8081"
+    replication-peer-address: "n2:13371"
+    signing-peer-address: "n2:23371"
+  - n3:
+    id: 3
+    pubkey: "n3.key.pub"
+    tls-cert: "n3.crt"
+    client-address: "n3:8081"
+    replication-peer-address: "n3:13371"
+    signing-peer-address: "n3:23371"
+  - n4:
+    id: 4
+    pubkey: "n4.key.pub"
+    tls-cert: "n4.crt"
+    client-address: "n4:8081"
+    replication-peer-address: "n4:13371"
+    signing-peer-address: "n4:23371"
