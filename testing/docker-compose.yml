@@ -48,4 +48,4 @@ services:
 networks: 
   default:
     external:
-      name: hotcertification_cluster
+      name: hotcertification
