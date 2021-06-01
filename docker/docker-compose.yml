@@ -7,9 +7,9 @@ services:
     volumes:
       - ./keys/1:/home
     ports:
-      - "8081"
-      - "13371"
-      - "23371"
+      - "8081:8081"
+    environment: 
+      - HOTSTUFF_LOG=info
     command: certificationserver --id 1 --thresholdkey n1.thresholdkey --privkey n1.key
 
   n2:
@@ -18,9 +18,9 @@ services:
     volumes:
       - ./keys/2:/home
     ports:
-      - "8081"
-      - "13371"
-      - "23371"
+      - "8082:8081"
+    environment: 
+      - HOTSTUFF_LOG=info
     command: certificationserver --id 2 --thresholdkey n2.thresholdkey --privkey n2.key
 
   n3:
@@ -29,9 +29,9 @@ services:
     volumes:
       - ./keys/3:/home
     ports:
-      - "8081"
-      - "13371"
-      - "23371"
+      - "8083:8081"
+    environment: 
+      - HOTSTUFF_LOG=info
     command: certificationserver --id 3 --thresholdkey n3.thresholdkey --privkey n3.key
 
   n4:
@@ -40,7 +40,12 @@ services:
     volumes:
       - ./keys/4:/home
     ports:
-      - "8081"
-      - "13371"
-      - "23371"
+      - "8084:8081"
+    environment: 
+      - HOTSTUFF_LOG=info
     command: certificationserver --id 4 --thresholdkey n4.thresholdkey --privkey n4.key
+
+networks: 
+  default:
+    external:
+      name: hotcertification_cluster
