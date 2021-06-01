@@ -1,13 +1,13 @@
 #!/bin/bash
 
-pos allocations allocate bitcoingold
+#pos allocations allocate bitcoingold
 
-pos nodes image bitcoingold debian-buster
+#pos nodes image bitcoingold debian-buster
 
-pos nodes reset bitcoingold
+#pos nodes reset bitcoingold
 
-scp ./hotcertification bitcoingold:~
+scp -r /home/schleith/hotcertification bitcoingold:~
 
-pos commands launch bitcoingold -- sh docker/install-docker-debian.sh
+pos commands launch bitcoingold -- sh hotcertification/testing/install-docker-debian.sh
 
 
