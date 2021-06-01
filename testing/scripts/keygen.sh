@@ -6,4 +6,5 @@
 # Then config file and keys are organized into node folders
 
 docker run  --name "keygen" -v "/root/hotcertification/testing:/home" raphasch/hotcertification keygen -n 4 -t 3 --key-size 512 keys
+./scripts/keygen.sh keys 4
 docker container prune
