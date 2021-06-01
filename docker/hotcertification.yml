@@ -9,7 +9,7 @@ view-timeout: 100
 
 # Size of RSA key that certificates are signed with
 # must be same size as set when generating keys with keygen executable
-key-size: 512
+key-size: 2048
 
 peers: 
   - n1:
