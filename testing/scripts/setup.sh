@@ -17,3 +17,5 @@ pos commands launch bitcoingold -- sh hotcertification/testing/install-docker-de
 echo "Pulling hotcertification image from docker hub"
 pos commands launch bitcoingold -- docker pull raphasch/hotcertification
 
+echo "Creating docker network for hotcertification cluster"
+pos commands launch bitcoingold -- docker network create hotcertification
