@@ -8,7 +8,7 @@
 5. SSH into the node
 6. Navigate to hotcertification/testing directory
 7. `./scripts/keygen.sh`
-8. `./scripts/start_servers <num_nodes>`
+8. `./scripts/start_servers <keys_directory> <num_nodes>`
 9. `./scripts/stop_server <num_nodes>`
 
 ### TODO

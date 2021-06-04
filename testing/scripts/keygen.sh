@@ -8,7 +8,7 @@
 dir=$1
 num_nodes=$2
 
-docker run --name "keygen" -v "/root/hotcertification/testing:/home" raphasch/hotcertification keygen -n $num_nodes -t 3 --key-size 512 $dir
+docker run --name "keygen" -v "$(pwd):/home" raphasch/hotcertification keygen -n $num_nodes -t 3 --key-size 512 $dir
 
 cd $dir
 for i in $(seq 1 $num_nodes)

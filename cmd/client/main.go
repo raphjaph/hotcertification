@@ -21,7 +21,6 @@ import (
 	"github.com/spf13/viper"
 	"google.golang.org/grpc"
 
-	"github.com/raphasch/hotcertification/crypto"
 	pb "github.com/raphasch/hotcertification/protocol"
 )
 
@@ -115,7 +114,7 @@ func main() {
 	}
 
 	// creating CSR with client public key
-	clientCSR, err := GenerateCSR(clientKey)
+	clientCSR, err := generateCSR(clientKey)
 	if err != nil {
 		log.Fatalf("failed to generate CSR: %v", err)
 		return
@@ -125,34 +124,44 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
 
-	// putting CSR into protocol buffers format and calling remote function
-	response, err := hotcertification.GetCertificate(ctx, &pb.CSR{
-		ClientID:           8,
-		CertificateRequest: clientCSR.Raw,
-	})
-	if err != nil {
-		log.Fatalf("failed to call RPC: %v", err)
-		return
+	var total time.Duration
+	for i := 0; i < 100; i++ {
+
+		start := time.Now()
+		// putting CSR into protocol buffers format and calling remote function
+		_, err := hotcertification.GetCertificate(ctx, &pb.CSR{
+			ClientID:           8,
+			CertificateRequest: clientCSR.Raw,
+		})
+		if err != nil {
+			log.Fatalf("failed to call RPC: %v", err)
+			return
+		}
+		elapsed := time.Since(start)
+		total += elapsed
+		fmt.Printf("CSR took %s\n", elapsed)
 	}
 
-	certificate, err := x509.ParseCertificate(response.Certificate)
-	if err != nil {
-		log.Fatalf("failed to parse certificate: %v", err)
-		return
-	}
+	fmt.Printf("The average latency for getting a Certificate is %s \n", total/100)
+
+	//certificate, err := x509.ParseCertificate(response.Certificate)
+	//if err != nil {
+	//log.Fatalf("failed to parse certificate: %v", err)
+	//return
+	//}
 
 	// TODO: verify signature with root certificate
 
 	// Write certificate to file
 
-	crypto.WriteCertFile(certificate, opts.Destination)
+	//crypto.WriteCertFile(certificate, opts.Destination)
 
-	fmt.Println("Wrote certificate to file")
+	//fmt.Println("Wrote certificate to file")
 
 	return
 }
 
-func GenerateCSR(clientPrivKey *rsa.PrivateKey) (csr *x509.CertificateRequest, err error) {
+func generateCSR(clientPrivKey *rsa.PrivateKey) (csr *x509.CertificateRequest, err error) {
 	csrTmpl := &x509.CertificateRequest{
 		SignatureAlgorithm: x509.SHA256WithRSA,
 		PublicKeyAlgorithm: x509.RSA,
