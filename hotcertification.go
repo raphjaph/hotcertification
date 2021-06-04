@@ -14,13 +14,13 @@ import (
 
 // Information other replicas in network have to know about each other (public knowledge)
 // Private knowledge (threshold key, ecdsa private key) have to given through command line and not in global config file
-type Peer struct {
-	ID                  hotstuff.ID
-	PubKey              string `mapstructure:"pubkey"`
-	TLSCert             string `mapstructure:"tls-cert"`
-	ClientAddr          string `mapstructure:"client-address"`
-	ReplicationPeerAddr string `mapstructure:"replication-peer-address"`
-	SigningPeerAddr     string `mapstructure:"signing-peer-address"`
+type Node struct {
+	ID                 hotstuff.ID
+	PubKey             string `mapstructure:"pubkey"`
+	TLSCert            string `mapstructure:"tls-cert"`
+	ClientSrvAddr      string `mapstructure:"client-srv-address"`
+	ReplicationSrvAddr string `mapstructure:"replication-srv-address"`
+	SigningSrvAddr     string `mapstructure:"signing-srv-address"`
 }
 
 type Options struct {
@@ -41,7 +41,7 @@ type Options struct {
 	ThresholdKey string `mapstructure:"thresholdkey"`
 	KeySize      int    `mapstructure:"key-size"`
 	ConfigFile   string `mapstructure:"config"`
-	Peers        []Peer
+	Nodes        []Node
 }
 
 type RequestInfo struct {
@@ -202,7 +202,7 @@ func (c *Coordinator) Accept(cmd hotstuff.Command) bool {
 	return true
 }
 
-// Tells the coordinator that the request/batch of requests have succesfully been proposed to other nodes/replicas
+// Tells the coordinator that the request/batch of requests have succesfully been proposed to other nodes
 func (c *Coordinator) Proposed(cmd hotstuff.Command) {
 	/*
 		1. Unmarshal hotstuff.Command to CSR format

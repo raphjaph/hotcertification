@@ -35,7 +35,7 @@ import (
 type replicationServer struct {
 	hs          *hotstuff.HotStuff      // the byzantine fault tolerant replication (consensus) algorithm
 	hsSrv       *hotstuffbackend.Server // the transport backend for the consensus algorithm
-	cfg         *hotstuffbackend.Config // manages the connections to the other peers/replicas in the network
+	cfg         *hotstuffbackend.Config // manages the connections to the other nodes in the network
 	coordinator *hc.Coordinator
 }
 
@@ -86,7 +86,7 @@ func NewReplicationServer(coordinator *hc.Coordinator, opts *hc.Options) *replic
 	return srv
 }
 
-// TODO: parse peer info into hotstuff/config.ReplicaConfig and pass that struct into NewReplicationServer()
+// TODO: parse node info into hotstuff/config.ReplicaConfig and pass that struct into NewReplicationServer()
 func createReplicaConfig(opts *hc.Options) *hsconfig.ReplicaConfig {
 	// Read the HotStuff ecdsa private key
 	privKey, err := keygen.ReadPrivateKeyFile(opts.PrivKey)
@@ -97,20 +97,20 @@ func createReplicaConfig(opts *hc.Options) *hsconfig.ReplicaConfig {
 
 	// Ignoring TLS for now
 	replicaConfig := hsconfig.NewConfig(opts.ID, privKey, nil)
-	for _, p := range opts.Peers {
-		key, err := keygen.ReadPublicKeyFile(p.PubKey)
+	for _, node := range opts.Nodes {
+		key, err := keygen.ReadPublicKeyFile(node.PubKey)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Failed to read public key file '%s': %v\n", p.PubKey, err)
+			fmt.Fprintf(os.Stderr, "Failed to read public key file '%s': %v\n", node.PubKey, err)
 			os.Exit(1)
 		}
 
 		info := &hsconfig.ReplicaInfo{
-			ID:      p.ID,
-			Address: p.ReplicationPeerAddr,
+			ID:      node.ID,
+			Address: node.ReplicationSrvAddr,
 			PubKey:  key,
 		}
 
-		replicaConfig.Replicas[p.ID] = info
+		replicaConfig.Replicas[node.ID] = info
 	}
 
 	return replicaConfig

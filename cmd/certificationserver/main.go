@@ -4,7 +4,7 @@
 		2. Replicate through HotStuff
 		3. Generate x509 Certificate
 		4. Compute Partial Signature and store in database
-			4a. If Gateway Node then ask other replicas for partial signatures
+			4a. If Gateway Node then ask other nodes for partial signatures
 				4a1. Verify partial signatures
 				4a2. Compute Full signature and return certificate to client
 			4b. If Request from other node then pass on partial signature
@@ -127,19 +127,19 @@ func main() {
 	coordinator := hc.NewCoordinator()
 	//cmdCache := hc.NewCmdCache(1)
 
-	// Parsing signing peer information
-	signingPeers := make([]string, len(opts.Peers))
-	for i, peer := range opts.Peers {
-		signingPeers[i] = peer.SigningPeerAddr
+	// Parsing signing node information
+	signingNodes := make([]string, len(opts.Nodes))
+	for i, node := range opts.Nodes {
+		signingNodes[i] = node.SigningSrvAddr
 	}
 
 	replicationServer := replication.NewReplicationServer(coordinator, opts)
-	signingServer := signing.NewSigningServer(coordinator, thresholdKey, signingPeers, opts.RootCA)
+	signingServer := signing.NewSigningServer(coordinator, thresholdKey, signingNodes, opts.RootCA)
 	clientServer := NewClientServer(coordinator)
 
-	go replicationServer.Start(ctx, opts.Peers[opts.ID-1].ReplicationPeerAddr)
-	go signingServer.Start(opts.Peers[opts.ID-1].SigningPeerAddr)
-	go clientServer.Start(opts.Peers[opts.ID-1].ClientAddr)
+	go replicationServer.Start(ctx, opts.Nodes[opts.ID-1].ReplicationSrvAddr)
+	go signingServer.Start(opts.Nodes[opts.ID-1].SigningSrvAddr)
+	go clientServer.Start(opts.Nodes[opts.ID-1].ClientSrvAddr)
 
 	<-ctx.Done()
 }

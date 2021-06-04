@@ -386,7 +386,7 @@ func GenerateConfiguration(t uint16, n uint16, keySize int, destination string) 
 	}
 
 	/*
-		The CA Root Certificate is a root certificate signed by itself (a threshold of replicas/nodes of the network).
+		The CA Root Certificate is a root certificate signed by itself (a threshold of nodes of the network).
 		This is done in the trusted setup phase (initialization/key generation).
 		Every saves this certificate to issue new partially signed certificates.
 		The Gateway/Aggregator then combines these partial signatures and issues a completely normal looking certificate to the client.

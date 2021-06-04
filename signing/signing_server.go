@@ -21,11 +21,11 @@ type signingServer struct {
 	backendSrv  *gorums.Server // handles the transport/serialization/tls....
 	signingMgr  *Manager       // calls the RPC on the other servers to get a partial signature
 	rootCA      *x509.Certificate
-	Peers       []string
+	Nodes       []string
 	coordinator *hc.Coordinator
 }
 
-func NewSigningServer(coordinator *hc.Coordinator, key *crypto.ThresholdKey, peers []string, rootCAFile string) *signingServer {
+func NewSigningServer(coordinator *hc.Coordinator, key *crypto.ThresholdKey, nodes []string, rootCAFile string) *signingServer {
 
 	// add options here
 	gorumsSrv := gorums.NewServer()
@@ -47,7 +47,7 @@ func NewSigningServer(coordinator *hc.Coordinator, key *crypto.ThresholdKey, pee
 		backendSrv:  gorumsSrv,
 		signingMgr:  mgr,
 		rootCA:      rootCA,
-		Peers:       peers,
+		Nodes:       nodes,
 		coordinator: coordinator,
 	}
 
@@ -73,8 +73,8 @@ func (srv *signingServer) GetPartialSig(_ context.Context, cert *Certificate, ou
 
 	partialSig, err := crypto.ComputePartialSignature(certificate, srv.key)
 	if err != nil {
-		srv.coordinator.Log.Error("Failed to compute a partial signature: ", err)
-		out(nil, fmt.Errorf("Failed to compute a partial signature"))
+		srv.coordinator.Log.Error("failed to compute a partial signature: ", err)
+		out(nil, fmt.Errorf("failed to compute a partial signature"))
 		return
 	}
 
@@ -86,7 +86,6 @@ func (srv *signingServer) GetPartialSig(_ context.Context, cert *Certificate, ou
 		Z:  partialSig.Z,
 		Id: uint32(partialSig.Id)},
 		nil)
-	return
 }
 
 func (srv *signingServer) GetFullSignature(csr *protocol.CSR) (*x509.Certificate, error) {
@@ -94,7 +93,7 @@ func (srv *signingServer) GetFullSignature(csr *protocol.CSR) (*x509.Certificate
 	// Create a configuration including all signers/nodes
 
 	// TODO: do not create this everytime but once in constructor
-	signersConfig, err := srv.signingMgr.NewConfiguration(gorums.WithNodeList(srv.Peers))
+	signersConfig, err := srv.signingMgr.NewConfiguration(gorums.WithNodeList(srv.Nodes))
 	if err != nil {
 		srv.coordinator.Log.Error("failed to initialize signing session: ", err)
 		return nil, err
@@ -117,10 +116,10 @@ func (srv *signingServer) GetFullSignature(csr *protocol.CSR) (*x509.Certificate
 	for i, node := range signersConfig.Nodes() {
 
 		// TODO: rename Certificate to certificate bytes or raw or ...
-		srv.coordinator.Log.Infof("Sending partial signature request to peer %v.", node.ID())
+		srv.coordinator.Log.Infof("Sending partial signature request to Node %v.", node.ID())
 		sigShare, err := node.GetPartialSig(context.Background(), &Certificate{Certificate: cert.Raw})
 		if err != nil {
-			srv.coordinator.Log.Errorf("failed to get partial signature from peer %v.", node.ID())
+			srv.coordinator.Log.Errorf("failed to get partial signature from Node %v.", node.ID())
 			return nil, err
 		}
 
@@ -135,7 +134,7 @@ func (srv *signingServer) GetFullSignature(csr *protocol.CSR) (*x509.Certificate
 	srv.coordinator.Log.Info("Computing full signature for certificate.")
 	fullCert, err := crypto.ComputeFullySignedCert(cert, srv.key, partialSigs...)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to compute full signature: %v", err)
+		return nil, fmt.Errorf("failed to compute full signature: %v", err)
 	}
 
 	return fullCert, nil

@@ -1,14 +1,14 @@
 /*
 	KEY GENERATION EXECUTABLE:
 		1. Key shares computed and wrapped into compatible data structure (see threshold_key.go)
-		2. Root certificate computed and self-signed by replicas
+		2. Root certificate computed and self-signed by nodes
 
-			The CA Root Certificate is a root certificate signed by itself (a threshold of replicas/nodes of the network).
+			The CA Root Certificate is a root certificate signed by itself (a threshold of nodes/nodes of the network).
 			This is done in the trusted setup phase (initialization/key generation).
 			Every saves this certificate to issue new partially signed certificates.
 			The Gateway/Aggregator then combines these partial signatures and issues a completely normal looking certificate to the client
 
-		3. Create TLS certificates for secure communication between replicas with root certificate
+		3. Create TLS certificates for secure communication between nodes with root certificate
 		4. Computes HotStuff ecdsa keys for replication/consensus logic
 		5. Marshall/Write root cert, tls certs, hotstuff priv and pub keys and threshold keys to files
 */
@@ -48,8 +48,8 @@ func parseOptions() (options, string) {
 
 	flag.Usage = usage
 	help := flag.BoolP("help", "h", false, "Prints this text.")
-	flag.Uint16P("num", "n", 3, "The number of replicas to generate keys/certs for.")
-	flag.Uint16P("threshold", "t", 2, "The threshold of replicas that can generate a valid signature on a certificate.")
+	flag.Uint16P("num", "n", 3, "The number of nodes to generate keys/certs for.")
+	flag.Uint16P("threshold", "t", 2, "The threshold of nodes that can generate a valid signature on a certificate.")
 	flag.Int("key-size", 512, "The size of the RSA private key from which the threshold keys are generated. Has to be one of 512/1024/2048/4096.")
 	flag.Parse()
 
