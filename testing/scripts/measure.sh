@@ -5,7 +5,7 @@ if [[ $# -eq 0 ]] ; then
     exit 0
 fi
 measure_dir=$1
-num_client=$2
+num_clients=$2
 
 for i in $(seq 1 $num_clients)
 do
