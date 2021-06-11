@@ -30,6 +30,7 @@ type options struct {
 	RootCA      string `mapstructure:"root-ca"`
 	ServerAddr  string `mapstructure:"server-addr"`
 	Destination string `mapstructure:"destination"`
+	File        string `mapstructure:"file"`
 }
 
 func usage() {
@@ -43,7 +44,7 @@ func parseOptions() options {
 	flag.Usage = usage
 
 	help := flag.BoolP("help", "h", false, "Prints this text.")
-
+	flag.String("file", "", "The name of file where to store measurements")
 	flag.Bool("tls", false, "Connection uses TLS if true, else plain TCP")
 	flag.String("root-ca", "", "The file containing the root CA  cert file")
 	flag.String("server-addr", "localhost:8081", "The server address in the format of host:port")
@@ -145,7 +146,7 @@ func main() {
 		measurements[i] = elapsed
 	}
 
-	file, err := os.Create("measurements.csv")
+	file, err := os.Create(opts.File)
 	checkError("Cannot create file", err)
 	defer file.Close()
 

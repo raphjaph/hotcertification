@@ -40,9 +40,9 @@ cat <<EOF >> hotcertification.toml
 id = $i
 pubkey = "n$i.key.pub"
 tls-cert = "n$i.crt"
-client-srv-address = "127.0.0.1:8081"
-replication-srv-address = "127.0.0.1:13371"
-signing-srv-address = "127.0.0.1:23371"
+client-srv-address = "n$i:8081"
+replication-srv-address = "n$i:13371"
+signing-srv-address = "n$i:23371"
 
 EOF
 done
@@ -55,7 +55,7 @@ cd $dir
 for i in $(seq 1 $num_nodes)
 do
     mkdir $i;
-    cp ../hotcertification.yml $i
+    cp ../hotcertification.toml $i
     mv n$i.thresholdkey n$i.key $i
     cp *.pub *.crt $i
 done
