@@ -2,6 +2,10 @@ syntax = "proto3";
 package signing;
 option go_package = "./example/threshold/signing";
 
+// TODO:
+// 1. Don't send certificate but cert hash or other identifier
+// 2. Make asynchronous RPC
+
 service Signing {
     rpc GetPartialSig(Certificate) returns (SigShare) {}
 }

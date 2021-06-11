@@ -12,6 +12,7 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/csv"
 	"fmt"
 	"log"
 	"os"
@@ -124,25 +125,37 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
 
-	var total time.Duration
+	csr := &pb.CSR{
+		ClientID:           8,
+		CertificateRequest: clientCSR.Raw,
+		ValidationInfo:     make([]byte, 100),
+	}
+
+	measurements := make([]time.Duration, 100)
 	for i := 0; i < 100; i++ {
 
 		start := time.Now()
 		// putting CSR into protocol buffers format and calling remote function
-		_, err := hotcertification.GetCertificate(ctx, &pb.CSR{
-			ClientID:           8,
-			CertificateRequest: clientCSR.Raw,
-		})
+		_, err := hotcertification.GetCertificate(ctx, csr)
 		if err != nil {
 			log.Fatalf("failed to call RPC: %v", err)
 			return
 		}
 		elapsed := time.Since(start)
-		total += elapsed
-		fmt.Printf("CSR took %s\n", elapsed)
+		measurements[i] = elapsed
 	}
 
-	fmt.Printf("The average latency for getting a Certificate is %s \n", total/100)
+	file, err := os.Create("measurements.csv")
+	checkError("Cannot create file", err)
+	defer file.Close()
+
+	writer := csv.NewWriter(file)
+	defer writer.Flush()
+
+	for _, duration := range measurements {
+		err := writer.Write([]string{fmt.Sprintf("%d", duration.Milliseconds())})
+		checkError("Cannot write to file", err)
+	}
 
 	//certificate, err := x509.ParseCertificate(response.Certificate)
 	//if err != nil {
@@ -157,8 +170,6 @@ func main() {
 	//crypto.WriteCertFile(certificate, opts.Destination)
 
 	//fmt.Println("Wrote certificate to file")
-
-	return
 }
 
 func generateCSR(clientPrivKey *rsa.PrivateKey) (csr *x509.CertificateRequest, err error) {
@@ -178,4 +189,10 @@ func generateCSR(clientPrivKey *rsa.PrivateKey) (csr *x509.CertificateRequest, e
 	}
 
 	return x509.ParseCertificateRequest(bytes)
+}
+
+func checkError(message string, err error) {
+	if err != nil {
+		log.Fatal(message, err)
+	}
 }

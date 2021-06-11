@@ -18,11 +18,11 @@ import (
 
 type signingServer struct {
 	key         *crypto.ThresholdKey
-	backendSrv  *gorums.Server // handles the transport/serialization/tls....
-	signingMgr  *Manager       // calls the RPC on the other servers to get a partial signature
 	rootCA      *x509.Certificate
-	Nodes       []string
 	coordinator *hc.Coordinator
+	nodes       []string
+	signingMgr  *Manager       // calls the RPC on the other servers to get a partial signature
+	backendSrv  *gorums.Server // handles the transport/serialization/tls....
 }
 
 func NewSigningServer(coordinator *hc.Coordinator, key *crypto.ThresholdKey, nodes []string, rootCAFile string) *signingServer {
@@ -47,7 +47,7 @@ func NewSigningServer(coordinator *hc.Coordinator, key *crypto.ThresholdKey, nod
 		backendSrv:  gorumsSrv,
 		signingMgr:  mgr,
 		rootCA:      rootCA,
-		Nodes:       nodes,
+		nodes:       nodes,
 		coordinator: coordinator,
 	}
 
@@ -93,7 +93,7 @@ func (srv *signingServer) GetFullSignature(csr *protocol.CSR) (*x509.Certificate
 	// Create a configuration including all signers/nodes
 
 	// TODO: do not create this everytime but once in constructor
-	signersConfig, err := srv.signingMgr.NewConfiguration(gorums.WithNodeList(srv.Nodes))
+	signersConfig, err := srv.signingMgr.NewConfiguration(gorums.WithNodeList(srv.nodes))
 	if err != nil {
 		srv.coordinator.Log.Error("failed to initialize signing session: ", err)
 		return nil, err
