@@ -11,3 +11,5 @@ for i in $(seq 1 $num_clients)
 do
 docker run -d --name client$i -v "$(pwd)/$measure_dir:/home" --network "hotcertification" raphasch/hotcertification client client$i.crt --server-addr "n$i:8081" --file $i.csv
 done
+
+docker container prune
