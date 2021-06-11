@@ -1,0 +1,46 @@
+# For TLS 
+root-ca = "root.crt"
+
+# HotStuff config options
+pacemaker = "round-robin"
+leader-id = 1
+view-timeout = 100
+
+# Size of RSA key that certificates are signed with
+# must be same size as set when generating keys with keygen executable
+key-size = 512
+
+
+# This is the information that each replica is given about the other replicas
+[[nodes]]
+id = 1
+pubkey = "n1.key.pub"
+tls-cert = "n1.crt"
+client-srv-address = "127.0.0.1:8081"
+replication-srv-address = "127.0.0.1:13371"
+signing-srv-address = "127.0.0.1:23371"
+
+[[nodes]]
+id = 2
+pubkey = "n2.key.pub"
+tls-cert = "n2.crt"
+client-srv-address = "127.0.0.1:8081"
+replication-srv-address = "127.0.0.1:13371"
+signing-srv-address = "127.0.0.1:23371"
+
+[[nodes]]
+id = 3
+pubkey = "n3.key.pub"
+tls-cert = "n3.crt"
+client-srv-address = "127.0.0.1:8081"
+replication-srv-address = "127.0.0.1:13371"
+signing-srv-address = "127.0.0.1:23371"
+
+[[nodes]]
+id = 4
+pubkey = "n4.key.pub"
+tls-cert = "n4.crt"
+client-srv-address = "127.0.0.1:8081"
+replication-srv-address = "127.0.0.1:13371"
+signing-srv-address = "127.0.0.1:23371"
+
