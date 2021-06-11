@@ -1,5 +1,10 @@
 #!/bin/bash
 
+if [[ $# -eq 0 ]] ; then
+    echo 'please provide key directory (relative path) and the number of servers to start'
+    exit 0
+fi
+
 keydir=$1
 num_nodes=$2
 

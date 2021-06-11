@@ -1,12 +1,4 @@
 #!/bin/bash
 
-num_nodes=$1
-
-for i in $(seq 1 $num_nodes)
-do
-docker stop n$i
-done
-
-
+docker stop $(docker ps | grep 'n*' | awk '{print $1}')
 docker container prune
-
