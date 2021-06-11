@@ -1,21 +1,23 @@
 #!/bin/bash
 
-echo "Allocating bitcoingold"
-pos allocations allocate bitcoingold
+node=bitcoin
 
-pos nodes image bitcoingold debian-buster
+echo "Allocating $node"
+pos allocations allocate $node
+
+pos nodes image $node debian-buster
 
 echo "Restarting machine with new OS"
-pos nodes reset bitcoingold
+pos nodes reset $node
 
 echo "Copying repo to machine"
-scp -q -r /home/schleith/hotcertification bitcoingold:~
+scp -q -r /home/schleith/hotcertification $node:~
 
 echo "Installing docker on machine"
-pos commands launch bitcoingold -- sh hotcertification/testing/install-docker-debian.sh
+pos commands launch $node -- sh hotcertification/testing/scripts/install-docker-debian.sh
 
 echo "Pulling hotcertification image from docker hub"
-pos commands launch bitcoingold -- docker pull raphasch/hotcertification
+pos commands launch $node -- docker pull raphasch/hotcertification
 
 echo "Creating docker network for hotcertification cluster"
-pos commands launch bitcoingold -- docker network create hotcertification
+pos commands launch $node -- docker network create hotcertification
