@@ -30,7 +30,6 @@ type options struct {
 	RootCA      string `mapstructure:"root-ca"`
 	ServerAddr  string `mapstructure:"server-addr"`
 	Destination string `mapstructure:"destination"`
-	File        string `mapstructure:"file"`
 }
 
 func usage() {
@@ -146,7 +145,7 @@ func main() {
 		measurements[i] = elapsed
 	}
 
-	file, err := os.Create(opts.File)
+	file, err := os.OpenFile(opts.Destination, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 	checkError("Cannot create file", err)
 	defer file.Close()
 
@@ -157,20 +156,6 @@ func main() {
 		err := writer.Write([]string{fmt.Sprintf("%d", duration.Milliseconds())})
 		checkError("Cannot write to file", err)
 	}
-
-	//certificate, err := x509.ParseCertificate(response.Certificate)
-	//if err != nil {
-	//log.Fatalf("failed to parse certificate: %v", err)
-	//return
-	//}
-
-	// TODO: verify signature with root certificate
-
-	// Write certificate to file
-
-	//crypto.WriteCertFile(certificate, opts.Destination)
-
-	//fmt.Println("Wrote certificate to file")
 }
 
 func generateCSR(clientPrivKey *rsa.PrivateKey) (csr *x509.CertificateRequest, err error) {

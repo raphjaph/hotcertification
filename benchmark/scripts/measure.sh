@@ -9,7 +9,7 @@ num_clients=$2
 
 for i in $(seq 1 $num_clients)
 do
-docker run -d --name client$i -v "$(pwd)/$measurements:/home/measurements" --network "hotcertification" raphasch/hotcertification client client$i.crt --server-addr "n$i:8081" --file $i.csv
+docker run -d --name client$i -v "$(pwd)/$measurements:/home/measurements" --network "hotcertification" raphasch/hotcertification benchmark m1.csv --server-addr "n$i:8081"
 done
 
-docker container prune
+docker container prune -f

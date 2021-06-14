@@ -1,7 +1,7 @@
 
 binaries := cmd/certificationserver/certserver cmd/client/client cmd/keygen/keygen benchmark/benchmark
 
-.PHONY: all clean $(binaries) 
+.PHONY: all clean $(binaries) benchmark
 
 all: $(binaries)
 

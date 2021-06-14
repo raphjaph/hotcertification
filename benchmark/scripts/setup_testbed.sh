@@ -14,7 +14,7 @@ echo "Copying repo to machine"
 scp -q -r /home/schleith/hotcertification $node:~
 
 echo "Installing docker on machine"
-pos commands launch $node -- sh hotcertification/testing/scripts/install-docker-debian.sh
+pos commands launch $node -- sh hotcertification/benchmark/scripts/install-docker-debian.sh
 
 echo "Pulling hotcertification image from docker hub"
 pos commands launch $node -- docker pull raphasch/hotcertification

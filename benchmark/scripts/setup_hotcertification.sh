@@ -62,4 +62,4 @@ done
 rm *.pub *.crt
 
 # Removing container
-docker container prune
+docker container prune -f
