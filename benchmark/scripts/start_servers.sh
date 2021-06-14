@@ -1,6 +1,6 @@
 #!/bin/bash
 
-if [[ $# -eq 0 ]] ; then
+if [[ $# -lt 1 ]] ; then
     echo 'please provide key directory (relative path) and the number of servers to start'
     exit 0
 fi

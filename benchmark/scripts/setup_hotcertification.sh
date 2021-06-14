@@ -6,7 +6,7 @@
 # Then config file and keys are organized into node folders
 
 
-if [[ $# -eq 0 ]] ; then
+if [[ $# -lt 2 ]] ; then
     echo 'please provide a directory for where the keys should be saved and the number of nodes'
     exit 0
 fi
