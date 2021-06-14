@@ -5,6 +5,7 @@ import (
 	"crypto/x509"
 	"fmt"
 	"net"
+	"os"
 	"time"
 
 	"github.com/niclabs/tcrsa"
@@ -21,16 +22,16 @@ type signingServer struct {
 	rootCA      *x509.Certificate
 	coordinator *hc.Coordinator
 	nodes       []string
-	signingMgr  *Manager       // calls the RPC on the other servers to get a partial signature
+	mgr         *Manager // calls the RPC on the other servers to get a partial signature
+	cfg         *Configuration
 	backendSrv  *gorums.Server // handles the transport/serialization/tls....
 }
 
 func NewSigningServer(coordinator *hc.Coordinator, key *crypto.ThresholdKey, nodes []string, rootCAFile string) *signingServer {
-
 	// add options here
 	gorumsSrv := gorums.NewServer()
 	mgr := NewManager(
-		gorums.WithDialTimeout(500*time.Millisecond),
+		gorums.WithDialTimeout(10*time.Second),
 		gorums.WithGrpcDialOptions(
 			grpc.WithBlock(),
 			grpc.WithInsecure(),
@@ -45,7 +46,7 @@ func NewSigningServer(coordinator *hc.Coordinator, key *crypto.ThresholdKey, nod
 	sigSrv := &signingServer{
 		key:         key,
 		backendSrv:  gorumsSrv,
-		signingMgr:  mgr,
+		mgr:         mgr,
 		rootCA:      rootCA,
 		nodes:       nodes,
 		coordinator: coordinator,
@@ -57,7 +58,7 @@ func NewSigningServer(coordinator *hc.Coordinator, key *crypto.ThresholdKey, nod
 	return sigSrv
 }
 
-func (srv *signingServer) GetPartialSig(_ context.Context, cert *Certificate, out func(*SigShare, error)) {
+func (srv *signingServer) GetPartialSig(_ context.Context, tbs *TBS, out func(*SigShare, error)) {
 	/*
 		1. Parse certificate
 		2. Partially Sign certificate
@@ -65,20 +66,28 @@ func (srv *signingServer) GetPartialSig(_ context.Context, cert *Certificate, ou
 		4. TODO: check database if already signed and then update to signed = true
 	*/
 
-	srv.coordinator.Log.Info("Receiving request for partial signature on certificate.")
-	certificate, err := x509.ParseCertificate(cert.Certificate)
-	if err != nil {
-		srv.coordinator.Log.Error("Failed to parse certificate from bytes: ", err)
+	srv.coordinator.Log.Info("Received request for partial signature. Checking authorization.")
+	info := srv.coordinator.Database[tbs.CSRHash]
+	if info == nil || !info.Validated {
+		srv.coordinator.Log.Error("CSR has not been validated.")
+		out(nil, fmt.Errorf("CSR has not been validated"))
+		return
 	}
 
-	partialSig, err := crypto.ComputePartialSignature(certificate, srv.key)
+	cert, err := x509.ParseCertificate(tbs.Certificate)
+	if err != nil {
+		srv.coordinator.Log.Error("error parsing certificate")
+	}
+
+	partialSig, err := crypto.ComputePartialSignature(cert, srv.key)
 	if err != nil {
 		srv.coordinator.Log.Error("failed to compute a partial signature: ", err)
 		out(nil, fmt.Errorf("failed to compute a partial signature"))
 		return
 	}
 
-	srv.coordinator.Log.Infof("Successfully partially signed certificate for client %v.", certificate.Subject.CommonName)
+	srv.coordinator.Log.Info("Successfully partially signed certificate for CSR ", tbs.CSRHash[:6])
+	info.Signed = true
 
 	out(&SigShare{
 		Xi: partialSig.Xi,
@@ -89,15 +98,9 @@ func (srv *signingServer) GetPartialSig(_ context.Context, cert *Certificate, ou
 }
 
 func (srv *signingServer) GetFullSignature(csr *protocol.CSR) (*x509.Certificate, error) {
-	// where are the other signers available
-	// Create a configuration including all signers/nodes
 
-	// TODO: do not create this everytime but once in constructor
-	signersConfig, err := srv.signingMgr.NewConfiguration(gorums.WithNodeList(srv.nodes))
-	if err != nil {
-		srv.coordinator.Log.Error("failed to initialize signing session: ", err)
-		return nil, err
-	}
+	hash := hc.HashCSR(csr)
+	srv.coordinator.Log.Info("Initializing treshold signing session CSR ", hash[:6])
 
 	x509csr, err := x509.ParseCertificateRequest(csr.CertificateRequest)
 	if err != nil {
@@ -109,25 +112,21 @@ func (srv *signingServer) GetFullSignature(csr *protocol.CSR) (*x509.Certificate
 		srv.coordinator.Log.Error(err)
 	}
 
-	srv.coordinator.Log.Infof("Initializing treshold signing session for certificate from %v.", cert.Subject.CommonName)
+	// TODO: rename to quorumAnswer? quorumOfReplies?
+	thresholdOf, err := srv.cfg.GetPartialSig(context.Background(), &TBS{CSRHash: hash, Certificate: cert.Raw})
+	if err != nil {
+		srv.coordinator.Log.Errorf("failed to get enough partial signatures.")
+		return nil, err
+	}
 
 	// in tcrsa K is threshold and L is total number of participants
-	partialSigs := make(tcrsa.SigShareList, len(signersConfig.Nodes()))
-	for i, node := range signersConfig.Nodes() {
-
-		// TODO: rename Certificate to certificate bytes or raw or ...
-		srv.coordinator.Log.Infof("Sending partial signature request to Node %v.", node.ID())
-		sigShare, err := node.GetPartialSig(context.Background(), &Certificate{Certificate: cert.Raw})
-		if err != nil {
-			srv.coordinator.Log.Errorf("failed to get partial signature from Node %v.", node.ID())
-			return nil, err
-		}
-
+	partialSigs := make(tcrsa.SigShareList, hc.QuorumSize(len(srv.cfg.Nodes())))
+	for i, share := range thresholdOf.SigShares {
 		partialSigs[i] = &tcrsa.SigShare{
-			Xi: sigShare.GetXi(),
-			C:  sigShare.GetC(),
-			Z:  sigShare.GetZ(),
-			Id: uint16(sigShare.GetId()),
+			Xi: share.GetXi(),
+			C:  share.GetC(),
+			Z:  share.GetZ(),
+			Id: uint16(share.GetId()),
 		}
 	}
 
@@ -146,10 +145,20 @@ func (srv *signingServer) Start(addr string) {
 	if err != nil {
 		fmt.Println(err)
 	}
+	// starting listener
+	go srv.backendSrv.Serve(lis)
+
+	// creating configuration (group of signers)
+	signersConfig, err := srv.mgr.NewConfiguration(
+		&QSpec{hc.QuorumSize(len(srv.nodes))},
+		gorums.WithNodeList(srv.nodes))
+	if err != nil {
+		srv.coordinator.Log.Error("failed to initialize signing configuration: ", err)
+		os.Exit(1)
+	}
+	srv.cfg = signersConfig
 
 	srv.coordinator.Log.Infof("Signing server listening on %v.", addr)
-
-	go srv.backendSrv.Serve(lis)
 
 	// TODO: add cancel function through context
 	for {
@@ -157,9 +166,27 @@ func (srv *signingServer) Start(addr string) {
 		cert, err := srv.GetFullSignature(csr)
 		if err != nil {
 			srv.coordinator.Log.Errorf("Couldn't generate full signature: %v", err)
+			srv.coordinator.FinishedCerts <- &protocol.Certificate{}
+		} else {
+			// wrap x509 cert and convert to ASN.1 DER encoded byte array
+			srv.coordinator.FinishedCerts <- &protocol.Certificate{Certificate: cert.Raw}
 		}
 
-		// wrap x509 cert and convert to ASN.1 DER encoded byte array
-		srv.coordinator.FinishedCerts <- &protocol.Certificate{Certificate: cert.Raw}
 	}
+}
+
+type QSpec struct {
+	quorumSize int
+}
+
+func (qs *QSpec) GetPartialSigQF(_ *TBS, sigShares map[uint32]*SigShare) (*ThresholdOf, bool) {
+	if len(sigShares) < qs.quorumSize {
+		return nil, false
+	}
+	// TODO: is there a more efficient way?
+	shares := []*SigShare{}
+	for _, share := range sigShares {
+		shares = append(shares, share)
+	}
+	return &ThresholdOf{SigShares: shares}, true
 }

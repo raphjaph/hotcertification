@@ -2,7 +2,9 @@ package hotcertification
 
 import (
 	"context"
+	"crypto/sha256"
 	"crypto/x509"
+	"fmt"
 	"sync"
 
 	"github.com/relab/hotstuff"
@@ -60,7 +62,7 @@ type Coordinator struct {
 	ReplicationQueue chan *protocol.CSR
 	SigningQueue     chan *protocol.CSR
 	FinishedCerts    chan *protocol.Certificate
-	Database         map[uint32]*RequestInfo // simulating a basic database; the key is the ClientID
+	Database         map[string]*RequestInfo // simulating a basic database; the key the hash of the CSR
 	Marshaler        proto.MarshalOptions    // for translating into hotstuff.Command
 	Unmarshaler      proto.UnmarshalOptions  // for checking semantics of a request
 	HS               *hotstuff.HotStuff
@@ -70,10 +72,10 @@ type Coordinator struct {
 
 func NewCoordinator() *Coordinator {
 	return &Coordinator{
-		ReplicationQueue: make(chan *protocol.CSR, 10),
-		SigningQueue:     make(chan *protocol.CSR, 10),
-		FinishedCerts:    make(chan *protocol.Certificate, 10),
-		Database:         make(map[uint32]*RequestInfo),
+		ReplicationQueue: make(chan *protocol.CSR, 100),
+		SigningQueue:     make(chan *protocol.CSR, 100),
+		FinishedCerts:    make(chan *protocol.Certificate, 100),
+		Database:         make(map[string]*RequestInfo),
 		Marshaler:        proto.MarshalOptions{Deterministic: true},
 		Unmarshaler:      proto.UnmarshalOptions{DiscardUnknown: true},
 		Log:              logging.New("HOT LOG"),
@@ -98,7 +100,7 @@ func (c *Coordinator) AddRequest(csr *protocol.CSR) {
 
 	c.Log.Info("Added to CSR to Replication Queue")
 
-	id := csr.ClientID
+	hash := HashCSR(csr)
 	info := &RequestInfo{
 		CSR:        csr,
 		Received:   true,
@@ -110,7 +112,7 @@ func (c *Coordinator) AddRequest(csr *protocol.CSR) {
 	}
 
 	c.Mut.Lock()
-	c.Database[id] = info
+	c.Database[hash] = info
 	c.Mut.Unlock()
 }
 
@@ -169,20 +171,21 @@ func (c *Coordinator) Accept(cmd hotstuff.Command) bool {
 		return false
 	}
 
-	id := csr.ClientID
+	hash := HashCSR(csr)
 
-	x509_csr, err := x509.ParseCertificateRequest(csr.CertificateRequest)
+	// get certificate so that it can be validated
+	_, err = x509.ParseCertificateRequest(csr.CertificateRequest)
 	if err != nil {
 		c.Log.Error(err)
 	}
 
-	c.Log.Infof("Validating CSR from client %v with the certificate from %v", id, x509_csr.Subject.CommonName)
+	c.Log.Infof("Validating CSR %v", hash[:6])
 	validated := true
 
 	c.Mut.Lock()
 	defer c.Mut.Unlock()
 
-	if c.Database[id] == nil {
+	if c.Database[hash] == nil {
 		c.Log.Info("Adding to database")
 		info := &RequestInfo{
 			CSR:        csr,
@@ -193,13 +196,13 @@ func (c *Coordinator) Accept(cmd hotstuff.Command) bool {
 			Signed:     false,
 			Returned:   false,
 		}
-		c.Database[id] = info
+		c.Database[hash] = info
 
-	} else if c.Database[id].Proposed {
-		return false
 	}
 
-	return true
+	c.Database[hash].Validated = validated
+
+	return !c.Database[hash].Proposed
 }
 
 // Tells the coordinator that the request/batch of requests have succesfully been proposed to other nodes
@@ -248,12 +251,13 @@ func (c *Coordinator) Exec(cmd hotstuff.Command) {
 		c.Log.Errorf("Failed to unmarshal command: %v", err)
 		return
 	}
-	id := csr.ClientID
+
+	hash := HashCSR(csr)
 
 	c.Mut.Lock()
 	defer c.Mut.Unlock()
 
-	reqInfo := c.Database[id]
+	reqInfo := c.Database[hash]
 
 	// if this is server handling client request then initiates signing sesshion
 	if reqInfo.Received {
@@ -262,7 +266,24 @@ func (c *Coordinator) Exec(cmd hotstuff.Command) {
 		// TODO: make this channel send non-blocking with select+default
 		c.SigningQueue <- csr
 	}
-	c.Database[id].Replicated = true
+	c.Database[hash].Replicated = true
 }
 
-//var _ hotstuff.Acceptor = (*Coordinator)(nil)
+// helper functions
+
+func HashCSR(csr *protocol.CSR) string {
+	h := sha256.New()
+	h.Write([]byte(fmt.Sprintf("%v", csr.ClientID)))
+	h.Write([]byte(fmt.Sprintf("%v", csr.CertificateRequest)))
+	h.Write([]byte(fmt.Sprintf("%v", csr.ValidationInfo)))
+
+	return fmt.Sprintf("%x", h.Sum(nil))
+}
+
+func NumFaulty(n int) int {
+	return (n - 1) / 3
+}
+
+func QuorumSize(n int) int {
+	return n - NumFaulty(n)
+}

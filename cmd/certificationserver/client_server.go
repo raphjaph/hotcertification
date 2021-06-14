@@ -44,17 +44,19 @@ func (srv *clientServer) mustEmbedUnimplementedCertificationServer() {}
 
 func (srv *clientServer) GetCertificate(_ context.Context, csr *protocol.CSR) (*protocol.Certificate, error) {
 
-	srv.coordinator.Log.Info("Received CSR")
+	srv.coordinator.Log.Info("Received CSR ", hc.HashCSR(csr)[:6])
 
 	// First step; replication
 	srv.coordinator.AddRequest(csr)
 
 	// wait for fully signed certificate
 	certificate := <-srv.coordinator.FinishedCerts
-
-	srv.coordinator.Log.Info("Returning fully signed certificate to client.")
-
-	return certificate, nil
+	if certificate.Certificate != nil {
+		srv.coordinator.Log.Info("Returning fully signed certificate to client.")
+		return certificate, nil
+	} else {
+		return nil, fmt.Errorf("couldn't compute full signature on certificate")
+	}
 }
 
 func (srv *clientServer) Start(addr string) {

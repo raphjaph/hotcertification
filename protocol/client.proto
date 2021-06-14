@@ -8,8 +8,8 @@ service Certification {
 
 message CSR {
     uint32 ClientID = 1;
-    bytes CertificateRequest = 3;
-    bytes ValidationInfo = 4;
+    bytes CertificateRequest = 2;
+    bytes ValidationInfo = 3;
 }
 
 message Certificate {

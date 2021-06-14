@@ -15,7 +15,7 @@ import (
 
 const (
 	threshold   = 3
-	num         = 5
+	num         = 4
 	keySize     = 512
 	destination = "test_keys"
 )
@@ -34,7 +34,7 @@ func TestWriteReadEquality(t *testing.T) {
 
 	// Write keys to file
 	for i, key := range thresholdKeys {
-		thresholdKeyPath := filepath.Join(destination, fmt.Sprintf("p%v.thresholdkey", i+1))
+		thresholdKeyPath := filepath.Join(destination, fmt.Sprintf("n%v.thresholdkey", i+1))
 		err = crypto.WriteThresholdKeyFile(key, thresholdKeyPath)
 		if err != nil {
 			panic(fmt.Sprintf("%v", err))
@@ -44,7 +44,7 @@ func TestWriteReadEquality(t *testing.T) {
 	// Read keys from file and compare
 	readThresholdKeys := make([]*crypto.ThresholdKey, len(thresholdKeys))
 	for i, key := range thresholdKeys {
-		thresholdKeyPath := filepath.Join(destination, fmt.Sprintf("p%v.thresholdkey", i+1))
+		thresholdKeyPath := filepath.Join(destination, fmt.Sprintf("n%v.thresholdkey", i+1))
 		readThresholdKeys[i], err = crypto.ReadThresholdKeyFile(thresholdKeyPath)
 		if err != nil {
 			panic(fmt.Sprintf("%v", err))
@@ -93,7 +93,7 @@ func TestSigningProcess(t *testing.T) {
 	}
 
 	fmt.Println("Reading dummy key")
-	dummyKey, err := crypto.ReadThresholdKeyFile(destination + "/p1.thresholdkey")
+	dummyKey, err := crypto.ReadThresholdKeyFile(destination + "/n1.thresholdkey")
 	if err != nil {
 		panic(fmt.Sprintf("%v", err))
 	}
@@ -104,12 +104,12 @@ func TestSigningProcess(t *testing.T) {
 		panic(fmt.Sprintf("%v", err))
 	}
 
-	sigShares := make(tcrsa.SigShareList, num)
+	sigShares := make(tcrsa.SigShareList, threshold)
 	fmt.Println("Starting partially signing test")
-	for i := 0; i < num; i++ {
+	for i := 0; i < threshold; i++ {
 
 		fmt.Print("Reading a key from file -> ")
-		thresholdKey, err := crypto.ReadThresholdKeyFile(destination + fmt.Sprintf("/p%v.thresholdkey", i+1))
+		thresholdKey, err := crypto.ReadThresholdKeyFile(destination + fmt.Sprintf("/n%v.thresholdkey", i+1))
 		if err != nil {
 			panic(fmt.Sprintf("%v", err))
 		}

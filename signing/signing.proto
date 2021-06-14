@@ -1,17 +1,22 @@
 syntax = "proto3";
 package signing;
 option go_package = "./example/threshold/signing";
+import "gorums.proto";
 
 // TODO:
 // 1. Don't send certificate but cert hash or other identifier
 // 2. Make asynchronous RPC
 
 service Signing {
-    rpc GetPartialSig(Certificate) returns (SigShare) {}
+    rpc GetPartialSig(TBS) returns (SigShare) {
+        option (gorums.quorumcall) = true;
+        option (gorums.custom_return_type) = "ThresholdOf";
+    }
 }
 
-message Certificate {
-    bytes Certificate = 1;
+message TBS {
+    string CSRHash = 1;
+    bytes Certificate = 2;
 }
 
 message SigShare {
@@ -19,4 +24,8 @@ message SigShare {
     bytes C = 2;
     bytes Z = 3;
     uint32 Id = 4;
+}
+
+message ThresholdOf {
+    repeated SigShare SigShares = 1;
 }
