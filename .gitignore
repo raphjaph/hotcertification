@@ -6,5 +6,6 @@ client.crt
 cmd/client/client
 cmd/certificationserver/certserver
 cmd/keygen/keygen
+benchmark/benchmark
 !/.gitignore
 !/.gitmodules

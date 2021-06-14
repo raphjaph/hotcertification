@@ -1,15 +1,15 @@
 
-binaries := cmd/certificationserver/certserver cmd/client/client cmd/keygen/keygen 
+binaries := cmd/certificationserver/certserver cmd/client/client cmd/keygen/keygen benchmark/benchmark
 
-.PHONY: all clean $(binaries)
+.PHONY: all clean $(binaries) 
 
 all: $(binaries)
 
 $(binaries):
 	go build -o ./$@ ./$(dir $@)
 
-client: 
-	go build -o ./cmd/client/client ./cmd/client 
+benchmark: 
+	go build -o ./benchmark/benchmark ./benchmark
 
 clean:
 	rm -fv $(binaries)

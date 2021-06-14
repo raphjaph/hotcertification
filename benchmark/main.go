@@ -12,6 +12,7 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/csv"
 	"fmt"
 	"log"
 	"os"
@@ -21,7 +22,6 @@ import (
 	"github.com/spf13/viper"
 	"google.golang.org/grpc"
 
-	"github.com/raphasch/hotcertification/crypto"
 	pb "github.com/raphasch/hotcertification/protocol"
 )
 
@@ -132,25 +132,45 @@ func main() {
 		ValidationInfo:     make([]byte, 100),
 	}
 
-	// putting CSR into protocol buffers format and calling remote function
-	response, err := hotcertification.GetCertificate(ctx, csr)
-	if err != nil {
-		log.Fatalf("failed to call RPC: %v", err)
-		return
+	measurements := make([]time.Duration, 100)
+	for i := 0; i < 100; i++ {
+
+		start := time.Now()
+		// putting CSR into protocol buffers format and calling remote function
+		_, err := hotcertification.GetCertificate(ctx, csr)
+		if err != nil {
+			log.Fatalf("failed to call RPC: %v", err)
+			return
+		}
+		elapsed := time.Since(start)
+		measurements[i] = elapsed
 	}
 
-	certificate, err := x509.ParseCertificate(response.Certificate)
-	if err != nil {
-		log.Fatalf("failed to parse certificate: %v", err)
-		return
+	file, err := os.Create(opts.File)
+	checkError("Cannot create file", err)
+	defer file.Close()
+
+	writer := csv.NewWriter(file)
+	defer writer.Flush()
+
+	for _, duration := range measurements {
+		err := writer.Write([]string{fmt.Sprintf("%d", duration.Milliseconds())})
+		checkError("Cannot write to file", err)
 	}
+
+	//certificate, err := x509.ParseCertificate(response.Certificate)
+	//if err != nil {
+	//log.Fatalf("failed to parse certificate: %v", err)
+	//return
+	//}
 
 	// TODO: verify signature with root certificate
 
 	// Write certificate to file
-	crypto.WriteCertFile(certificate, opts.Destination)
 
-	fmt.Println("Wrote certificate to file")
+	//crypto.WriteCertFile(certificate, opts.Destination)
+
+	//fmt.Println("Wrote certificate to file")
 }
 
 func generateCSR(clientPrivKey *rsa.PrivateKey) (csr *x509.CertificateRequest, err error) {
@@ -170,4 +190,10 @@ func generateCSR(clientPrivKey *rsa.PrivateKey) (csr *x509.CertificateRequest, e
 	}
 
 	return x509.ParseCertificateRequest(bytes)
+}
+
+func checkError(message string, err error) {
+	if err != nil {
+		log.Fatal(message, err)
+	}
 }
