@@ -9,7 +9,8 @@
 6. Navigate to hotcertification/benchmark directory
 7. `./scripts/setup_hotcertification.sh <dir_for_keys> <num_nodes>` 
 8. `./scripts/start_servers <keys_directory> <num_nodes>`
-9. `./scripts/stop_servers`
+9. `./scripts/measure.sh <measurements_dir> <num_of_clients>`
+10. `./scripts/stop_servers`
 
 ### TODO
 
