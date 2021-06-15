@@ -8,6 +8,8 @@ fi
 dest=$1
 num_clients=$2
 
+mkdir $dest
+
 for i in $(seq 1 $num_clients)
 do
 docker run -d --name b$i -v "$(pwd)/$dest:/home" --network "hotcertification" raphasch/hotcertification benchmark m$i.csv --server-addr "n$i:8081"

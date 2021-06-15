@@ -152,6 +152,7 @@ func main() {
 	writer := csv.NewWriter(file)
 	defer writer.Flush()
 
+	writer.Write([]string{"time-to-certificate"})
 	for _, duration := range measurements {
 		err := writer.Write([]string{fmt.Sprintf("%d", duration.Milliseconds())})
 		checkError("Cannot write to file", err)

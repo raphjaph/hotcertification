@@ -1,11 +1,17 @@
 .*
 keys/
 logs/
+
 crypto/test_keys
+
 client.crt
+
 cmd/client/client
 cmd/certificationserver/certserver
 cmd/keygen/keygen
+
 benchmark/benchmark
+benchmark/measurements
+
 !/.gitignore
 !/.gitmodules
