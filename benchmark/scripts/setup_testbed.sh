@@ -1,6 +1,11 @@
 #!/bin/bash
 
-node=bitcoin
+if [[ $# -lt 1 ]] ; then
+    echo 'please provide node name'
+    exit 0
+fi
+
+node=$1
 
 echo "Allocating $node"
 pos allocations allocate $node
