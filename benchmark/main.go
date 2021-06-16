@@ -14,8 +14,10 @@ import (
 	"crypto/x509/pkix"
 	"encoding/csv"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
+	"strings"
 	"time"
 
 	flag "github.com/spf13/pflag"
@@ -29,6 +31,8 @@ type options struct {
 	TLS         bool   `mapstructure:"tls"`
 	RootCA      string `mapstructure:"root-ca"`
 	ServerAddr  string `mapstructure:"server-addr"`
+	File        string `mapstructure:"file"`
+	Scenario    string `mapstructure:"scenario"`
 	Destination string `mapstructure:"destination"`
 }
 
@@ -43,10 +47,11 @@ func parseOptions() options {
 	flag.Usage = usage
 
 	help := flag.BoolP("help", "h", false, "Prints this text.")
-	flag.String("file", "", "The name of file where to store measurements")
 	flag.Bool("tls", false, "Connection uses TLS if true, else plain TCP")
 	flag.String("root-ca", "", "The file containing the root CA  cert file")
 	flag.String("server-addr", "localhost:8081", "The server address in the format of host:port")
+	flag.String("file", "", "The file to attach to the CSR as the Validation Info.")
+	flag.String("scenario", "4,100,none,0", "What scenario the measurements are for.")
 
 	flag.Parse()
 
@@ -78,15 +83,11 @@ func parseOptions() options {
 	return opts
 }
 
-func main() {
-	// from command line
-	opts := parseOptions()
-
+func getClient(opts options) (client pb.CertificationClient, err error) {
 	// grpc setup
 	var gRPC_opts []grpc.DialOption
 	if opts.TLS {
-		log.Fatalf("tls not implemented yet")
-		return
+		return nil, fmt.Errorf("tls not implemented yet")
 		//creds, err := credentials.NewClientTLSFromFile(*caFile, *serverHostOverride)
 		//if err != nil {
 		//	log.Fatalf("Failed to create TLS credentials %v", err)
@@ -100,47 +101,83 @@ func main() {
 	// gprc start connection
 	conn, err := grpc.Dial(opts.ServerAddr, gRPC_opts...)
 	if err != nil {
-		log.Fatalf("failed to dial: %v", err)
-		return
+		return nil, fmt.Errorf("failed to dial: %v", err)
 	}
-	defer conn.Close()
-	hotcertification := pb.NewCertificationClient(conn)
+	//defer conn.Close()
+	client = pb.NewCertificationClient(conn)
+
+	return client, nil
+}
+
+func generateTestCSR(opts options) (csr *pb.CSR, err error) {
 
 	// generate private and public key for certificate
-	keySize := 512
-	clientKey, err := rsa.GenerateKey(rand.Reader, keySize)
+	clientKey, err := rsa.GenerateKey(rand.Reader, 512)
 	if err != nil {
-		log.Fatalf("failed to generate client keys: %v", err)
-		return
+		return nil, fmt.Errorf("failed to generate client keys: %v", err)
 	}
 
-	// creating CSR with client public key
-	clientCSR, err := generateCSR(clientKey)
-	if err != nil {
-		log.Fatalf("failed to generate CSR: %v", err)
-		return
+	csrTmpl := &x509.CertificateRequest{
+		SignatureAlgorithm: x509.SHA256WithRSA,
+		PublicKeyAlgorithm: x509.RSA,
+		Subject: pkix.Name{
+			CommonName: "Raphael Schleithoff",
+		},
+		EmailAddresses: []string{"raphael.schleithoff@tum.de"},
 	}
+
+	// the client's public key is inserted into the CSR
+	bytes, err := x509.CreateCertificateRequest(rand.Reader, csrTmpl, clientKey)
+	if err != nil {
+		return nil, err
+	}
+
+	var valInfo []byte
+	if opts.File == "" {
+		opts.File = "0.info"
+		_, err := os.Create(opts.File)
+		checkError("failed to create dummy file: ", err)
+	}
+
+	valInfo, err = ioutil.ReadFile(opts.File)
+	checkError("failed to open validation info file: ", err)
+
+	csr = &pb.CSR{
+		ClientID:           8,
+		CertificateRequest: bytes,
+		ValidationInfo:     valInfo,
+	}
+
+	return csr, nil
+}
+
+func checkError(message string, err error) {
+	if err != nil {
+		log.Fatal(message, err)
+	}
+}
+
+func main() {
+	opts := parseOptions()
+
+	client, err := getClient(opts)
+	checkError("couldn't instantiate client: ", err)
+
+	csr, err := generateTestCSR(opts)
+	checkError("failed to generate CSR:", err)
 
 	// Adding some context
-	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-
-	csr := &pb.CSR{
-		ClientID:           8,
-		CertificateRequest: clientCSR.Raw,
-		ValidationInfo:     make([]byte, 100),
-	}
 
 	measurements := make([]time.Duration, 100)
 	for i := 0; i < 100; i++ {
 
 		start := time.Now()
 		// putting CSR into protocol buffers format and calling remote function
-		_, err := hotcertification.GetCertificate(ctx, csr)
-		if err != nil {
-			log.Fatalf("failed to call RPC: %v", err)
-			return
-		}
+		_, err := client.GetCertificate(ctx, csr)
+		checkError("failed to call RPC:", err)
+
 		elapsed := time.Since(start)
 		measurements[i] = elapsed
 	}
@@ -152,34 +189,12 @@ func main() {
 	writer := csv.NewWriter(file)
 	defer writer.Flush()
 
-	writer.Write([]string{"time-to-certificate"})
+	// Header/Column names
+	writer.Write([]string{"time-to-certificate", "num-nodes", "csr-size", "adversary-type", "adversary-fraction"})
+	row := strings.Split(opts.Scenario, ",")
 	for _, duration := range measurements {
-		err := writer.Write([]string{fmt.Sprintf("%d", duration.Milliseconds())})
+		t2c := []string{fmt.Sprintf("%d", duration.Milliseconds())}
+		err := writer.Write(append(t2c, row...))
 		checkError("Cannot write to file", err)
-	}
-}
-
-func generateCSR(clientPrivKey *rsa.PrivateKey) (csr *x509.CertificateRequest, err error) {
-	csrTmpl := &x509.CertificateRequest{
-		SignatureAlgorithm: x509.SHA256WithRSA,
-		PublicKeyAlgorithm: x509.RSA,
-		Subject: pkix.Name{
-			CommonName: "Raphael Schleithoff",
-		},
-		EmailAddresses: []string{"raphael.schleithoff@tum.de"},
-	}
-
-	// the client's public key is inserted into the CSR
-	bytes, err := x509.CreateCertificateRequest(rand.Reader, csrTmpl, clientPrivKey)
-	if err != nil {
-		fmt.Println(err)
-	}
-
-	return x509.ParseCertificateRequest(bytes)
-}
-
-func checkError(message string, err error) {
-	if err != nil {
-		log.Fatal(message, err)
 	}
 }

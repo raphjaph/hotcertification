@@ -1,18 +1,15 @@
 #!/bin/bash
 
-if [[ $# -lt 2 ]] ; then
-    echo 'please provide a directory for where the measurments should be saved and the amount of clients started'
+if [[ $# -lt 3 ]] ; then
+    echo 'Please provide the scenario defintion, the validation info mock file and the amount of clients to start'
     exit 0
 fi
 
-dest=$1
-num_clients=$2
-
-mkdir $dest
+scenario=$1
+file=$2
+num_clients=$3
 
 for i in $(seq 1 $num_clients)
 do
-docker run -d --name b$i -v "$(pwd)/$dest:/home" --network "hotcertification" raphasch/hotcertification benchmark m$i.csv --server-addr "n$i:8081"
+docker run -d --name b$i -v "$(pwd)/measurements:/home" --network "hotcertification" raphasch/hotcertification benchmark --scenario $scenario --file $file --server-addr "n$i:8081" $dir/m$i.csv
 done
-
-docker container prune -f
