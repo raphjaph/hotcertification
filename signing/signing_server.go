@@ -31,7 +31,7 @@ func NewSigningServer(coordinator *hc.Coordinator, key *crypto.ThresholdKey, nod
 	// add options here
 	gorumsSrv := gorums.NewServer()
 	mgr := NewManager(
-		gorums.WithDialTimeout(10*time.Second),
+		gorums.WithDialTimeout(30*time.Second),
 		gorums.WithGrpcDialOptions(
 			grpc.WithBlock(),
 			grpc.WithInsecure(),
