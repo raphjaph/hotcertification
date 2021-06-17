@@ -18,15 +18,23 @@ def main():
     df = pd.concat(list)
     
 
+    fourNodes = df.loc[df["num-nodes"] == 4]
     sns.set_style("whitegrid")
-    sns.boxplot(y="time-to-certificate", 
+    bplot = sns.boxplot(y="time-to-certificate", 
                 x="csr-size",
-                data=df,
+                data=fourNodes,
                 showfliers=False,
                 width=0.2,)
-
-    # show plot
     plt.ylim(0)
+
+    bplot.set(xlabel ="CSR size in Bytes", ylabel = "time-to-certificate in ms", title ='Comparing CSR size')
+    plt.show()
+
+    node_count_plot = sns.boxplot(y="time-to-certificate", 
+            x="num-nodes",
+            data=df,
+            showfliers=False,
+            width=0.2,)
     plt.show()
 
 if __name__ == '__main__':
