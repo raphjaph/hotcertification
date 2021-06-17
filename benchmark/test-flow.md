@@ -8,9 +8,10 @@
 5. SSH into the node
 6. Navigate to hotcertification/benchmark directory
 7. `./scripts/start_servers <num_nodes>`
-8. `./scripts/measure.sh <scenario> <file> <num_of_clients>`
+8. Adapt the variables in `./scripts/measure.sh` for the specific test scenario
 9. `./scripts/stop_servers`
-10.`./scripts/cleanup.sh` 
+10. copy measurements data with scp: node -> coinbase -> computer
+11. `./scripts/cleanup.sh` 
 
 ### TODO
 

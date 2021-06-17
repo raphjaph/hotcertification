@@ -8,7 +8,7 @@ fi
 num_nodes=$1
 threshold=$(echo "$num_nodes - ($num_nodes - 1) / 3" | bc)
 
-# Generate a config file for docker deplyment (same network)
+# Generate a config file for docker deployment (same network)
 cat <<EOF >> hotcertification.toml
 # For TLS 
 root-ca = "root.crt"
@@ -55,7 +55,13 @@ done
 rm *.pub *.crt
 
 cd ..
+
+# test file for csr-size variable
 mkdir measurements
+truncate -s 100 measurements/100.info
+truncate -s 500 measurements/500.info
+truncate -s 1000 measurements/1000.info
+
 
 # create first container that logs and which the client connects to.
 docker run -d --name n1 --publish "8081:8081" --volume "$(pwd)/keys/1:/home" --env "HOTSTUFF_LOG=info" --network "hotcertification" raphasch/hotcertification certificationserver --id 1 --thresholdkey n1.thresholdkey --privkey n1.key &

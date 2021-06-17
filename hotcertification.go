@@ -71,10 +71,11 @@ type Coordinator struct {
 }
 
 func NewCoordinator() *Coordinator {
+	// TODO: How to pick good channel size?
 	return &Coordinator{
-		ReplicationQueue: make(chan *protocol.CSR, 100),
-		SigningQueue:     make(chan *protocol.CSR, 100),
-		FinishedCerts:    make(chan *protocol.Certificate, 100),
+		ReplicationQueue: make(chan *protocol.CSR, 100000),
+		SigningQueue:     make(chan *protocol.CSR, 100000),
+		FinishedCerts:    make(chan *protocol.Certificate, 100000),
 		Database:         make(map[string]*RequestInfo),
 		Marshaler:        proto.MarshalOptions{Deterministic: true},
 		Unmarshaler:      proto.UnmarshalOptions{DiscardUnknown: true},

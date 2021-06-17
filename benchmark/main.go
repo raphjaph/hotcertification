@@ -170,8 +170,8 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	measurements := make([]time.Duration, 100)
-	for i := 0; i < 100; i++ {
+	measurements := make([]time.Duration, 1000)
+	for i := 0; i < 1000; i++ {
 
 		start := time.Now()
 		// putting CSR into protocol buffers format and calling remote function
