@@ -7,5 +7,5 @@ num_clients=1
 
 for i in $(seq 1 $num_clients)
 do
-docker run -d --name b$i -v "$(pwd)/measurements:/home" --network "hotcertification" raphasch/hotcertification benchmark --scenario $scenario --file $file --server-addr "n$i:8081" m$i.csv
+docker run -d --name b$i -v "$(pwd)/measurements:/home" --network "hotcertification" raphasch/hotcertification benchmark --scenario $scenario --file $file --server-addr "n$i:8081" m$scenario-$i.csv
 done
