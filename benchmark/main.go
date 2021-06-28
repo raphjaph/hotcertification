@@ -33,6 +33,7 @@ type options struct {
 	ServerAddr  string `mapstructure:"server-addr"`
 	File        string `mapstructure:"file"`
 	Scenario    string `mapstructure:"scenario"`
+	Num         int    `mapstructure:"num"`
 	Destination string `mapstructure:"destination"`
 }
 
@@ -52,6 +53,7 @@ func parseOptions() options {
 	flag.String("server-addr", "localhost:8081", "The server address in the format of host:port")
 	flag.String("file", "", "The file to attach to the CSR as the Validation Info.")
 	flag.String("scenario", "4,100,none,0", "What scenario the measurements are for.")
+	num := flag.IntP("number", "n", 100, "number of requests to send.")
 
 	flag.Parse()
 
@@ -79,6 +81,7 @@ func parseOptions() options {
 	}
 
 	opts.Destination = flag.Arg(0)
+	opts.Num = *num
 
 	return opts
 }
@@ -166,8 +169,8 @@ func main() {
 	csr, err := generateTestCSR(opts)
 	checkError("failed to generate CSR:", err)
 
-	measurements := make([]time.Duration, 1000)
-	for i := 0; i < 1000; i++ {
+	measurements := make([]time.Duration, opts.Num)
+	for i := 0; i < opts.Num; i++ {
 
 		start := time.Now()
 		// putting CSR into protocol buffers format and calling remote function

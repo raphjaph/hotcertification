@@ -58,10 +58,10 @@ cd ..
 
 # test file for csr-size variable
 mkdir measurements
-truncate -s 100 measurements/100.info
-truncate -s 500 measurements/500.info
-truncate -s 1000 measurements/1000.info
-
+truncate -s 100B measurements/100B.info
+truncate -s 1K measurements/1K.info
+truncate -s 1M measurements/1M.info
+truncate -s 100M measurements/100M.info
 
 # create first container that logs and which the client connects to.
 docker run -d --name n1 --publish "8081:8081" --volume "$(pwd)/keys/1:/home" --env "HOTSTUFF_LOG=info" --network "hotcertification" raphasch/hotcertification certificationserver --id 1 --thresholdkey n1.thresholdkey --privkey n1.key &
