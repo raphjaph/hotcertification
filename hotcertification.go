@@ -259,6 +259,10 @@ func (c *Coordinator) Exec(cmd hotstuff.Command) {
 	defer c.Mut.Unlock()
 
 	reqInfo := c.Database[hash]
+	if reqInfo == nil {
+		c.Log.Infof("Couldn't find CSR %v in database.", hash[:6])
+		return
+	}
 
 	// if this is server handling client request then initiates signing sesshion
 	if reqInfo.Received {

@@ -60,8 +60,9 @@ cd ..
 mkdir measurements
 truncate -s 100 measurements/100B.info
 truncate -s 1K measurements/1K.info
+truncate -s 10K measurements/10K.info
+truncate -s 100K measurements/100K.info
 truncate -s 1M measurements/1M.info
-truncate -s 100M measurements/100M.info
 
 # create first container that logs and which the client connects to.
 docker run -d --name n1 --publish "8081:8081" --volume "$(pwd)/keys/1:/home" --env "HOTSTUFF_LOG=info" --network "hotcertification" raphasch/hotcertification certificationserver --id 1 --thresholdkey n1.thresholdkey --privkey n1.key &

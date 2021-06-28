@@ -169,12 +169,15 @@ func main() {
 	csr, err := generateTestCSR(opts)
 	checkError("failed to generate CSR:", err)
 
+	ctx := context.Background()
+
 	measurements := make([]time.Duration, opts.Num)
 	for i := 0; i < opts.Num; i++ {
-
+		log.Println("Sending #", i)
 		start := time.Now()
+
 		// putting CSR into protocol buffers format and calling remote function
-		_, err := client.GetCertificate(context.Background(), csr)
+		_, err := client.GetCertificate(ctx, csr)
 		checkError("failed to call RPC:", err)
 
 		elapsed := time.Since(start)

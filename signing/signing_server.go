@@ -5,7 +5,6 @@ import (
 	"crypto/x509"
 	"fmt"
 	"net"
-	"os"
 	"time"
 
 	"github.com/niclabs/tcrsa"
@@ -149,13 +148,19 @@ func (srv *signingServer) Start(addr string) {
 	go srv.backendSrv.Serve(lis)
 
 	// creating configuration (group of signers)
+	time.Sleep(10 * time.Second)
+
+TRY:
 	signersConfig, err := srv.mgr.NewConfiguration(
 		&QSpec{hc.QuorumSize(len(srv.nodes))},
 		gorums.WithNodeList(srv.nodes))
 	if err != nil {
 		srv.coordinator.Log.Error("failed to initialize signing configuration: ", err)
-		os.Exit(1)
+		err = nil
+		goto TRY
+		//os.Exit(1)
 	}
+
 	srv.cfg = signersConfig
 
 	srv.coordinator.Log.Infof("Signing server listening on %v.", addr)
