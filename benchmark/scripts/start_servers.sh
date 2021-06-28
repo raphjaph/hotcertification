@@ -1,7 +1,7 @@
 #!/bin/bash
 
 if [[ $# -lt 1 ]] ; then
-    echo 'please provide key directory (relative path) and the number of servers to start'
+    echo 'please provide the number of servers to start'
     exit 0
 fi
 
@@ -58,7 +58,7 @@ cd ..
 
 # test file for csr-size variable
 mkdir measurements
-truncate -s 100B measurements/100B.info
+truncate -s 100 measurements/100B.info
 truncate -s 1K measurements/1K.info
 truncate -s 1M measurements/1M.info
 truncate -s 100M measurements/100M.info
