@@ -9,7 +9,6 @@ view-timeout = 100
 # must be same size as set when generating keys with keygen executable
 key-size = 512
 
-
 # This is the information that each replica is given about the other replicas
 [[nodes]]
 id = 1
