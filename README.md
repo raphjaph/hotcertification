@@ -1,5 +1,33 @@
-# TODOs and Documentation
+# HotCertification: A distrbuted Certificate Authority
 
+A byzantine fault-tolerant state machine replication algorithm and threshold signature scheme that in conjunction perform the basic functionalities of a Certificate Authority (CA).
+It adds these layers of complexity in order to be more resilient against process failures and malicious attacks.
+The certification process can be abstracted to sign any piece of data (not just a X509 Certificate) like access tokens (macaroons) or JWTs and through that act as a sort of Authentication Server.
+ 
+## Using it
+This is really just a prototype I built as part of my Bachelor's thesis so it still has bugs and major refactoring.
+An example configuration of a cluster of four HotCertification nodes can be found in `hotcertification.toml`.
+Compile the binaries by calling `make`.
+Create the cryptographic material like private keys and TLS certificates with:
+````bash
+mkdir keys
+./cmd/keygen/keygen -n $num_nodes -t $threshold --key-size 512 keys
+```
+Run the cluster of four nodes locally by executing `run_servers_localhost.sh`.
+Test the cluster with an example client with:
+```bash
+./cmd/client/client client.crt
+```
+
+
+
+
+
+
+
+
+
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ## TODO
 
 - [] rename coordinator struct
