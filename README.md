@@ -9,7 +9,7 @@ This is really just a prototype I built as part of my Bachelor's thesis so it st
 An example configuration of a cluster of four HotCertification nodes can be found in `hotcertification.toml`.
 Compile the binaries by calling `make`.
 Create the cryptographic material like private keys and TLS certificates with:
-````bash
+```bash
 mkdir keys
 ./cmd/keygen/keygen -n $num_nodes -t $threshold --key-size 512 keys
 ```
