@@ -1,4 +1,4 @@
-# HotCertification: A distrbuted Certificate Authority
+# HotCertification: A distributed Certificate Authority
 
 A byzantine fault-tolerant state machine replication algorithm and threshold signature scheme that in conjunction perform the basic functionalities of a Certificate Authority (CA).
 It adds these layers of complexity in order to be more resilient against process failures and malicious attacks.
