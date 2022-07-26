@@ -5,40 +5,38 @@ It adds these layers of complexity in order to be more resilient against process
 The certification process can be abstracted to sign any piece of data (not just a X509 Certificate) like access tokens (macaroons) or JWTs and through that act as a sort of Authentication Server.
  
 ## Using it
-This is really just a prototype I built as part of my Bachelor's thesis so it still has bugs and major refactoring.
+
+This is really just a proof-of-concept I built as part of my [Bachelor's thesis](thesis.pdf) so it still has bugs and needs major refactoring (it doesn't even have a database and stores everything in-memory!!).
 An example configuration of a cluster of four HotCertification nodes can be found in `hotcertification.toml`.
 Compile the binaries by calling `make`.
 Create the cryptographic material like private keys and TLS certificates with:
+
 ```bash
 mkdir keys
-./cmd/keygen/keygen -n $num_nodes -t $threshold --key-size 512 keys
+./cmd/keygen/keygen -n $NUM_NODES -t $THRESHOLD --key-size 512 keys
 ```
+
 Run the cluster of four nodes locally by executing `run_servers_localhost.sh`.
 Test the cluster with an example client with:
+
 ```bash
 ./cmd/client/client client.crt
 ```
 
+`client.crt` is the name of file to write the X509 certificate to that has been requested from the CA.
 
 
-
-
-
-
-
-
-++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ## TODO
 
-- [] rename coordinator struct
+- [ ] rename coordinator struct
 - [x] merge/put in same dir coordinator.go and options.go (Because they outline how hotcertification works)
-- [] add [database](https://github.com/gostor/awesome-go-storage) or
+- [ ] add [database](https://github.com/gostor/awesome-go-storage) or
   [interface](https://github.com/philippgille/gokv) to database or check out
   [sqlite](https://www.sqlite.org/index.html)
 - [x] add a Makefile, see [here](https://makefiletutorial.com/) for help
-- [] make event-driven architecture? -> more lightweight; look at Flow implementation
-- [] instead of ClientID and Sequence Number just use Hash of CSR to identify request (replaces CMDID data structure) -> use HashMap
-- [] slow down consensus rounds?
+- [ ] make event-driven architecture? -> more lightweight; look at Flow implementation
+- [ ] instead of ClientID and Sequence Number just use Hash of CSR to identify request (replaces CMDID data structure) -> use HashMap
+- [ ] slow down consensus rounds?
 - [x] go run with SIGNALS
 
 ## Testing
@@ -47,18 +45,18 @@ Test the cluster with an example client with:
 
 ## Logging and Configuration
 
-- [] add a custom level to the log -> APPLICATION/CERTIFICATION; refactor code accordingly
-- [] find out how to show logs from internal consensus protocol and client facing
+- [ ] add a custom level to the log -> APPLICATION/CERTIFICATION; refactor code accordingly
+- [ ] find out how to show logs from internal consensus protocol and client facing
 server; pipe HS log into my logger
-- [] change hotstuff.toml to hotstuff.yml see [here](https://stackoverflow.com/questions/33989612/yaml-equivalent-of-array-of-objects-in-json)
+- [ ] change hotstuff.toml to hotstuff.yml see [here](https://stackoverflow.com/questions/33989612/yaml-equivalent-of-array-of-objects-in-json)
 - [x] merge internal/cli into main
 
 
 ## Crypto/Threshold library
 
-- [] define curve parameters somewhere (CURVE, G, N) [wiki](https://en.wikipedia.org/wiki/Elliptic_Curve_Digital_Signature_Algorithm)
-- [] recycle PartialCert from Hotstuff for Certification Service crypto
-- [] add error checks to threshold.go
+- [ ] define curve parameters somewhere (CURVE, G, N) [wiki](https://en.wikipedia.org/wiki/Elliptic_Curve_Digital_Signature_Algorithm)
+- [ ] recycle PartialCert from Hotstuff for Certification Service crypto
+- [ ] add error checks to threshold.go
 
 ## Miscellaneous
 
